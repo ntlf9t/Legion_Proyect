@@ -1057,6 +1057,7 @@ class WorldSession
         bool PlayerLogout() const { return m_playerLogout; }
         bool PlayerLogoutWithSave() const { return m_playerLogout && m_playerSave; }
         bool PlayerRecentlyLoggedOut() const { return m_playerRecentlyLogout; }
+		bool PlayerDisconnected() const;
 
         bool IsAddonRegistered(std::string const& prefix);
 
@@ -1094,6 +1095,7 @@ class WorldSession
         ObjectGuid GetBattlenetAccountGUID() const;
         Player* GetPlayer() const { return _player; }
         std::string GetPlayerName(bool simple = true) const;
+        std::string GetPlayerInfo() const;
 
         Map* GetMap() const { return m_map; }
         void SetMap(Map* m) { m_map = m; }
@@ -1231,10 +1233,7 @@ class WorldSession
             m_timeOutTime -= int32(diff);
         }
 
-        void ResetTimeOutTime()
-        {
-            m_timeOutTime = int32(sWorld->getIntConfig(CONFIG_SOCKET_TIMEOUTTIME));
-        }
+        void ResetTimeOutTime();
 
         bool IsConnectionIdle() const
         {
@@ -1914,6 +1913,7 @@ class WorldSession
         void HandleGarrisonGetBuildingLandmarks(WorldPackets::Garrison::GarrisonGetBuildingLandmarks& packet);
         void HandleGarrisonMissionBonusRoll(WorldPackets::Garrison::GarrisonMissionBonusRoll& packet);
         void HandleGarrisonRequestLandingPageShipmentInfo(WorldPackets::Garrison::GarrisonRequestLandingPageShipmentInfo& packet);
+        bool AdventureMapPOIAvailable(uint32 adventureMapPOIID);
         void HandleGarrisonRequestScoutingMap(WorldPackets::Garrison::GarrisonRequestScoutingMap& scoutingMap);
         void HandleGarrisonCheckUpgradeable(WorldPackets::Garrison::GarrisonCheckUpgradeable& packet);
         void HandleGarrisonStartMission(WorldPackets::Garrison::GarrisonStartMission& packet);

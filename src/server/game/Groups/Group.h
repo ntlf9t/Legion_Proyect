@@ -398,7 +398,7 @@ class Group
         Rolls::iterator GetRoll(uint8 slot);
         void ErraseRollbyRealSlot(uint8 slot, Loot* loot);
         void CountTheRoll(Rolls::iterator roll);
-        void CountRollVote(ObjectGuid playerGUID, uint8 slot, uint8 Choise);
+        bool CountRollVote(ObjectGuid playerGUID, uint8 slot, uint8 Choise);
         void DoRollForAllMembers(ObjectGuid guid, uint8 slot, uint32 mapid, Loot*, LootItem&, Player*);
         void EndRoll(Loot* loot);
         void ClearAoeSlots();

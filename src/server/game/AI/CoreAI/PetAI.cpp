@@ -153,10 +153,13 @@ void PetAI::UpdateAI(uint32 diff)
             return;
         }
 
-        if (owner && !owner->isInCombat())
-            owner->SetInCombatWith(me->getVictim());
-
-        if (!me->GetCasterPet())
+        // Check before attacking to prevent pets from leaving stay position
+        if (me->GetCharmInfo()->HasCommandState(COMMAND_STAY))
+        {
+            if (me->GetCharmInfo()->IsCommandAttack() || (me->GetCharmInfo()->IsAtStay() && me->IsWithinMeleeRange(me->getVictim())))
+                DoMeleeAttackIfReady();
+        }
+        else
             DoMeleeAttackIfReady();
     }
     else if (owner && me->GetCharmInfo()) //no victim
@@ -391,6 +394,18 @@ void PetAI::KilledUnit(Unit* victim)
 
 void PetAI::AttackStart(Unit* target)
 {
+    // Overrides Unit::AttackStart to prevent pet from switching off its assigned target
+    if (!target || target == me)
+        return;
+
+    if (me->getVictim() && me->getVictim()->isAlive())
+        return;
+
+    _AttackStart(target);
+}
+
+void PetAI::_AttackStart(Unit* target)
+{
     // Overrides Unit::AttackStart to correctly evaluate Pet states
 
     // Check all pet states to decide if we can attack this target
@@ -408,7 +423,7 @@ void PetAI::OwnerDamagedBy(Unit* attacker)
     // Called when owner takes damage. Allows defensive pets to know
     //  that their owner might need help
 
-    if (!attacker)
+    if (!attacker || !me->isAlive())
         return;
 
     // Passive pets don't do anything
@@ -429,7 +444,7 @@ void PetAI::OwnerAttacked(Unit* target)
     //  that they need to assist
 
     // Target might be NULL if called from spell with invalid cast targets
-    if (!target)
+    if (!target || !me->isAlive())
         return;
 
     // Passive pets don't do anything
@@ -527,23 +542,49 @@ void PetAI::DoAttack(Unit* target, bool chase)
     // (Follow && (Aggressive || Defensive))
     // ((Stay || Follow) && (Passive && player clicked attack))
 
-    if (chase)
+    //if (chase)
+    //{
+    //    if (me->Attack(target, true))
+    //    {
+     //       me->GetCharmInfo()->SetIsAtStay(false);
+     //       me->GetCharmInfo()->SetIsFollowing(false);
+     //       me->GetCharmInfo()->SetIsReturning(false);
+    //        me->GetMotionMaster()->Clear();
+    //        me->GetMotionMaster()->MoveChase(target, me->GetAttackDist() - 0.5f);
+    //    }
+    //}
+    //else // (Stay && ((Aggressive || Defensive) && In Melee Range)))
+    //{
+    //    me->GetCharmInfo()->SetIsAtStay(true);
+     //   me->GetCharmInfo()->SetIsFollowing(false);
+     //   me->GetCharmInfo()->SetIsReturning(false);
+     //   me->Attack(target, !me->GetCasterPet());
+    //}
+    // Handles attack with or without chase and also resets flags
+    // for next update / creature kill
+
+    if (me->Attack(target, true))
     {
-        if (me->Attack(target, true))
+        // Play sound to let the player know the pet is attacking something it picked on its own
+        if (me->HasReactState(REACT_AGGRESSIVE) && !me->GetCharmInfo()->IsCommandAttack())
+            me->SendPetAIReaction(me->GetGUID());
+
+        if (chase)
         {
-            me->GetCharmInfo()->SetIsAtStay(false);
+			me->GetCharmInfo()->SetIsAtStay(false);
             me->GetCharmInfo()->SetIsFollowing(false);
-            me->GetCharmInfo()->SetIsReturning(false);
+            bool oldCmdAttack = me->GetCharmInfo()->IsCommandAttack(); // This needs to be reset after other flags are cleared
             me->GetMotionMaster()->Clear();
-            me->GetMotionMaster()->MoveChase(target, me->GetAttackDist() - 0.5f);
+            me->GetCharmInfo()->SetIsCommandAttack(oldCmdAttack); // For passive pets commanded to attack so they will use spells
+			me->GetMotionMaster()->MoveChase(target, me->GetAttackDist() - 0.5f);
         }
-    }
-    else // (Stay && ((Aggressive || Defensive) && In Melee Range)))
-    {
-        me->GetCharmInfo()->SetIsAtStay(true);
-        me->GetCharmInfo()->SetIsFollowing(false);
-        me->GetCharmInfo()->SetIsReturning(false);
-        me->Attack(target, !me->GetCasterPet());
+        else // (Stay && ((Aggressive || Defensive) && In Melee Range)))
+        {
+            me->GetCharmInfo()->SetIsAtStay(true);
+            me->GetCharmInfo()->SetIsFollowing(false);
+			me->GetCharmInfo()->SetIsReturning(false);
+			me->Attack(target, !me->GetCasterPet());
+        }
     }
 }
 

@@ -86,7 +86,7 @@ public:
 
     ~RealmList();
 
-    void Initialize(boost::asio::io_service& ioService, uint32 updateInterval);
+    void Initialize(boost::asio::io_context& ioService, uint32 updateInterval);
     void Close();
 
     RealmMap const& GetRealms() const { return _realms; }

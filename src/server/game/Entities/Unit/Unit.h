@@ -1128,8 +1128,8 @@ class Unit : public WorldObject
 
         virtual ~Unit();
 
-        void Clear();
-        uint32 GetSize();
+        void Clear() override;
+        uint32 GetSize() override;
 
         UnitAI* GetAI() { return i_AI; }
         void SetAI(UnitAI* newAI) { i_AI = newAI; }
@@ -1157,7 +1157,7 @@ class Unit : public WorldObject
         float GetSpellMaxRangeForTarget(Unit const* target, SpellInfo const* spellInfo) const;
         float GetSpellMinRangeForTarget(Unit const* target, SpellInfo const* spellInfo) const;
 
-        virtual void Update(uint32 time);
+        virtual void Update(uint32 time) override;
 
         void setAttackTimer(WeaponAttackType type, uint32 time) { m_attackTimer[type] = time; }
         void resetAttackTimer(WeaponAttackType type = BASE_ATTACK);
@@ -1386,11 +1386,6 @@ class Unit : public WorldObject
         void ProcDamageAndSpell(Unit* victim, uint32 procAttacker, uint32 procVictim, uint32 procEx, DamageInfo* dmgInfoProc, WeaponAttackType attType = BASE_ATTACK, SpellInfo const* procSpell = nullptr, SpellInfo const* procAura = nullptr, Uint32Set* AppliedProcMods = nullptr, Spell* spell = nullptr);
         void ProcDamageAndSpellFor(bool isVictim, Unit* target, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, SpellInfo const* procSpell, DamageInfo* dmgInfoProc, SpellInfo const* procAura = nullptr, Uint32Set* AppliedProcMods = nullptr, Spell* spell = nullptr);
 
-        void GetProcAurasTriggeredOnEvent(std::list<AuraApplication*>& aurasTriggeringProc, std::list<AuraApplication*>* procAuras, ProcEventInfo eventInfo);
-        void TriggerAurasProcOnEvent(CalcDamageInfo& damageInfo);
-        void TriggerAurasProcOnEvent(std::list<AuraApplication*>* myProcAuras, std::list<AuraApplication*>* targetProcAuras, Unit* actionTarget, uint32 typeMaskActor, uint32 typeMaskActionTarget, uint32 spellTypeMask, uint32 spellPhaseMask, uint32 hitMask, Spell* spell, DamageInfo* damageInfo, HealInfo* healInfo);
-        void TriggerAurasProcOnEvent(ProcEventInfo& eventInfo, std::list<AuraApplication*>& procAuras);
-
         void HandleEmoteCommand(uint32 anim_id);
         void AttackerStateUpdate(Unit* victim, WeaponAttackType attType = BASE_ATTACK, bool extra = false, uint32 replacementAttackTrigger = 0, uint32 replacementAttackAura = 0, SpellSchoolMask schoolMask = SPELL_SCHOOL_MASK_NORMAL);
 
@@ -1562,7 +1557,7 @@ class Unit : public WorldObject
         bool SetDisableGravity(bool disable, bool isPlayer = false);
         bool SetFall(bool enable, bool isPlayer = false);
         bool SetSwim(bool enable);
-        bool SetCanFly(bool apply);
+        bool SetCanFly(bool enable);
         bool SetWaterWalking(bool enable);
         bool SetFeatherFall(bool enable);
         bool SetHover(bool enable);
@@ -2294,6 +2289,7 @@ class Unit : public WorldObject
         virtual bool CanSwim() const;
         virtual bool CanFly() const = 0;
         bool IsFlying() const   { return m_movementInfo.HasMovementFlag(MOVEMENTFLAG_FLYING | MOVEMENTFLAG_DISABLE_GRAVITY); }
+		bool IsFalling() const;
         void SetTimeForSpline(uint32 time) { m_timeForSpline = time; }
         uint32 GetTimeForSpline() { return m_timeForSpline; }
 

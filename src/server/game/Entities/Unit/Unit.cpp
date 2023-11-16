@@ -362,7 +362,7 @@ playerDamageTaken_(), npcDamageTaken_()
 
     ClearMirrorImageData();
 
-    memset(m_modAuras, NULL, sizeof(m_modAuras));
+    memset(m_modAuras, 0, sizeof(m_modAuras));
     memset(m_auraTypeCount, 0, sizeof(m_auraTypeCount));
 
     m_powerCost.assign(MAX_POWERS + 1, 0);
@@ -434,7 +434,7 @@ Unit::~Unit()
     delete m_charmInfo;
     delete movespline;
 
-    memset(m_modAuras, NULL, sizeof(m_modAuras));
+    memset(m_modAuras, 0, sizeof(m_modAuras));
     for (AuraEffectListMap::iterator iter = m_modMapAuras.begin(); iter != m_modMapAuras.end(); ++iter)
         delete iter->second;
     m_modMapAuras.clear();
@@ -1253,6 +1253,11 @@ uint32 Unit::DealDamage(Unit* victim, uint32 damage, CleanDamage const* cleanDam
                 he->DuelComplete(DUEL_FINISHED);
             });
         }
+		
+		// make player victims stand up automatically
+        if (victim->getStandState() && victim->IsPlayer() && damagetype != NODAMAGE && damagetype != DOT)
+            victim->SetStandState(UNIT_STAND_STATE_STAND);
+		
     }
 
     // TC_LOG_DEBUG(LOG_FILTER_UNITS, "DealDamageEnd returned %d damage", damage);
@@ -3962,8 +3967,10 @@ void Unit::_DeleteRemovedAuras()
         delete m_removedAuras.front();
         m_removedAuras.pop_front();
     }
+
     m_aura_lock.unlock();
     m_aura_is_lock = false;
+    m_removedAurasCount = 0;
 }
 
 void Unit::DestroyForPlayer(Player* target) const
@@ -4004,6 +4011,8 @@ void Unit::_UpdateSpells(uint32 time)
     {
         if (i->second->IsExpired())
             RemoveOwnedAura(i, AURA_REMOVE_BY_EXPIRE);
+		else if (i->second->GetSpellInfo()->IsChanneled() && i->second->GetCasterGUID() != GetGUID() && !ObjectAccessor::GetWorldObject(*this, i->second->GetCasterGUID()))
+            RemoveOwnedAura(i, AURA_REMOVE_BY_CANCEL); // remove channeled auras when caster is not on the same map
         else
             ++i;
     }
@@ -4213,12 +4222,13 @@ void Unit::InterruptSpell(CurrentSpellTypes spellType, bool withDelayed, bool wi
         if (spellType == CURRENT_AUTOREPEAT_SPELL)
             if (IsPlayer())
                 ToPlayer()->SendCancelAutoRepeat(this);
+		
+		m_currentSpells[spellType] = nullptr;
 
         if (spell->getState() != SPELL_STATE_FINISHED)
             spell->cancel();
-
-        m_currentSpells[spellType] = nullptr;
-        spell->SetReferencedFromCurrent(false);
+	    else
+            spell->SetReferencedFromCurrent(false);
 
         if (auto tmpPlayer = ToPlayer())
             if (curSpellInfo->Misc.CastTimes.Base && !curSpellInfo->IsPassive() && tmpPlayer->HaveSpectators())
@@ -4592,7 +4602,7 @@ void Unit::_ApplyAura(AuraApplication * aurApp, uint32 effMask)
         return;
 
     // Sitdown on apply aura req seated
-    if (spellInfo->HasAuraInterruptFlag(AURA_INTERRUPT_FLAG_NOT_SEATED) && !IsSitState())
+    if (spellInfo->HasAuraInterruptFlag(AURA_INTERRUPT_FLAG_NOT_SEATED) && IsStandState())
         SetStandState(UNIT_STAND_STATE_SIT);
 
     if (aurApp->GetRemoveMode())
@@ -11515,6 +11525,10 @@ bool Unit::Attack(Unit* victim, bool meleeAttack)
 
         ToCreature()->SendAIReaction(AI_REACTION_HOSTILE);
         ToCreature()->CallAssistance();
+
+        // Remove emote and stand state - will be restored on creature reset
+        //SetEmoteState(EMOTE_ONESHOT_NONE);
+        SetStandState(UNIT_STAND_STATE_STAND);
     }
 
     // delay offhand weapon attack to next attack time
@@ -12755,6 +12769,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     if (AuraEffectList const* mDamageDoneVersusAurastate = GetAuraEffectsByType(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE))
     for (AuraEffectList::const_iterator i = mDamageDoneVersusAurastate->begin(); i != mDamageDoneVersusAurastate->end(); ++i)
         if (victim->HasAuraState(AuraStateType((*i)->GetMiscValue())))
+		{
             if (HasAura(144421) && GetPower(POWER_ALTERNATE))
             {
                 int32 pos = GetPower(POWER_ALTERNATE);
@@ -12780,7 +12795,10 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
                 AddPct(DoneTotalMod, mod);
             }
             else
+			{
                 AddPct(DoneTotalMod, (*i)->GetAmount());
+			}
+		}
 
     // Add SPELL_AURA_MOD_DAMAGE_DONE_FOR_MECHANIC percent bonus
     if (spellProto->Categories.Mechanic)
@@ -14187,6 +14205,7 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
     if (AuraEffectList const* mDamageDoneVersusAurastate = GetAuraEffectsByType(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE))
     for (AuraEffectList::const_iterator i = mDamageDoneVersusAurastate->begin(); i != mDamageDoneVersusAurastate->end(); ++i)
         if (victim->HasAuraState(AuraStateType((*i)->GetMiscValue())))
+		{
             if (HasAura(144421) && GetPower(POWER_ALTERNATE))
             {
                 int32 pos = GetPower(POWER_ALTERNATE);
@@ -14212,7 +14231,10 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
                 AddPct(DoneTotalMod, mod);
             }
             else
+			{
                 AddPct(DoneTotalMod, (*i)->GetAmount());
+			}
+		}
 
     // Add SPELL_AURA_MOD_DAMAGE_DONE_FOR_MECHANIC percent bonus
     if (spellProto)
@@ -16062,6 +16084,9 @@ void Unit::setDeathState(DeathState s)
         //SetPower(getPowerType(), 0);
         SetUInt32Value(UNIT_FIELD_EMOTE_STATE, 0);
 
+        //SetEmoteState(EMOTE_ONESHOT_NONE);
+        SetStandState(UNIT_STAND_STATE_STAND);
+
         // players in instance don't have ZoneScript, but they have InstanceScript
         if (ZoneScript* zoneScript = GetZoneScript() ? GetZoneScript() : static_cast<ZoneScript*>(GetInstanceScript()))
             zoneScript->OnUnitDeath(this);
@@ -16978,10 +17003,13 @@ float Unit::GetTotalAttackPowerValue(WeaponAttackType attType) const
             return 0.0f;
         return ap * (1.0f + GetFloatValue(UNIT_FIELD_RANGED_ATTACK_POWER_MULTIPLIER));
     }
-    int32 ap = GetInt32Value(UNIT_FIELD_ATTACK_POWER) + GetInt32Value(UNIT_FIELD_ATTACK_POWER_MOD_POS) - GetInt32Value(UNIT_FIELD_ATTACK_POWER_MOD_NEG);
-    if (ap < 0)
-        return 0.0f;
-    return ap * (1.0f + GetFloatValue(UNIT_FIELD_ATTACK_POWER_MULTIPLIER));
+    else
+    {
+        int32 ap = GetInt32Value(UNIT_FIELD_ATTACK_POWER) + GetInt32Value(UNIT_FIELD_ATTACK_POWER_MOD_POS) - GetInt32Value(UNIT_FIELD_ATTACK_POWER_MOD_NEG);
+        if (ap < 0)
+            return 0.0f;
+        return ap * (1.0f + GetFloatValue(UNIT_FIELD_ATTACK_POWER_MULTIPLIER));
+	}
 }
 
 float Unit::GetWeaponDamageRange(WeaponAttackType attType, WeaponDamageRange type) const
@@ -17496,6 +17524,12 @@ void Unit::CleanupBeforeRemoveFromMap(bool finalCleanup)
 
     if (IsInWorld())
         RemoveFromWorld();
+    else
+    {
+        // cleanup that must happen even if not in world
+        if (IsVehicle())
+            RemoveVehicleKit(true);
+    }
 
     //! ==-- DOUBLE DRAGON --==
     RemoveAllAuras();   //remove auras witch was added while we where removing from world.
@@ -18496,70 +18530,6 @@ void Unit::ProcDamageAndSpellFor(bool isVictim, Unit* target, uint32 procFlag, u
         SetCantProc(false);
 }
 
-void Unit::GetProcAurasTriggeredOnEvent(std::list<AuraApplication*>& aurasTriggeringProc, std::list<AuraApplication*>* procAuras, ProcEventInfo eventInfo)
-{
-    // use provided list of auras which can proc
-    if (procAuras)
-    {
-        for (std::list<AuraApplication*>::iterator itr = procAuras->begin(); itr!= procAuras->end(); ++itr)
-        {
-            ASSERT((*itr)->GetTarget() == this);
-            if (!(*itr)->GetRemoveMode())
-                if ((*itr)->GetBase()->IsProcTriggeredOnEvent(*itr, eventInfo))
-                {
-                    (*itr)->GetBase()->PrepareProcToTrigger(*itr, eventInfo);
-                    aurasTriggeringProc.push_back(*itr);
-                }
-        }
-    }
-    // or generate one on our own
-    else
-    {
-        for (AuraApplicationMap::iterator itr = m_appliedAuras.begin(); itr!= m_appliedAuras.end(); ++itr)
-        {
-            if (itr->second->GetBase()->IsProcTriggeredOnEvent(itr->second.get(), eventInfo))
-            {
-                itr->second->GetBase()->PrepareProcToTrigger(itr->second.get(), eventInfo);
-                aurasTriggeringProc.push_back(itr->second.get());
-            }
-        }
-    }
-}
-
-void Unit::TriggerAurasProcOnEvent(CalcDamageInfo& damageInfo)
-{
-    DamageInfo dmgInfo = DamageInfo(damageInfo);
-    TriggerAurasProcOnEvent(nullptr, nullptr, damageInfo.target, damageInfo.procAttacker, damageInfo.procVictim, 0, 0, damageInfo.procEx, nullptr, &dmgInfo, nullptr);
-}
-
-void Unit::TriggerAurasProcOnEvent(std::list<AuraApplication*>* myProcAuras, std::list<AuraApplication*>* targetProcAuras, Unit* actionTarget, uint32 typeMaskActor, uint32 typeMaskActionTarget, uint32 spellTypeMask, uint32 spellPhaseMask, uint32 hitMask, Spell* spell, DamageInfo* damageInfo, HealInfo* healInfo)
-{
-    // prepare data for self trigger
-    ProcEventInfo myProcEventInfo = ProcEventInfo(this, actionTarget, actionTarget, typeMaskActor, spellTypeMask, spellPhaseMask, hitMask, spell, damageInfo, healInfo);
-    std::list<AuraApplication*> myAurasTriggeringProc;
-    GetProcAurasTriggeredOnEvent(myAurasTriggeringProc, myProcAuras, myProcEventInfo);
-
-    // prepare data for target trigger
-    ProcEventInfo targetProcEventInfo = ProcEventInfo(this, actionTarget, this, typeMaskActionTarget, spellTypeMask, spellPhaseMask, hitMask, spell, damageInfo, healInfo);
-    std::list<AuraApplication*> targetAurasTriggeringProc;
-    if (typeMaskActionTarget)
-        GetProcAurasTriggeredOnEvent(targetAurasTriggeringProc, targetProcAuras, targetProcEventInfo);
-
-    TriggerAurasProcOnEvent(myProcEventInfo, myAurasTriggeringProc);
-
-    if (typeMaskActionTarget)
-        TriggerAurasProcOnEvent(targetProcEventInfo, targetAurasTriggeringProc);
-}
-
-void Unit::TriggerAurasProcOnEvent(ProcEventInfo& eventInfo, std::list<AuraApplication*>& aurasTriggeringProc)
-{
-    for (std::list<AuraApplication*>::iterator itr = aurasTriggeringProc.begin(); itr != aurasTriggeringProc.end(); ++itr)
-    {
-        if (!(*itr)->GetRemoveMode())
-            (*itr)->GetBase()->TriggerProcOnEvent(*itr, eventInfo);
-    }
-}
-
 SpellSchoolMask Unit::GetMeleeDamageSchoolMask() const
 {
     return SPELL_SCHOOL_MASK_NORMAL;
@@ -18627,7 +18597,8 @@ void Unit::StopMoving()
         return;
 
     // Update position using old spline
-    UpdateSplinePosition(true);
+    if (movespline->HasStarted())
+        UpdateSplinePosition(true);
     Movement::MoveSplineInit(*this).Stop();
 }
 
@@ -19539,7 +19510,7 @@ bool Unit::SpellProcTriggered(Unit* victim, DamageInfo* dmgInfoProc, AuraEffect*
                 Unit* summon = nullptr;
                 GuidList* summonList = GetSummonList(itr->slot);
                 for (GuidList::const_iterator iter = summonList->begin(); iter != summonList->end(); ++iter)
-                    if(summon = ObjectAccessor::GetUnit(*this, (*iter)))
+                    if((summon = ObjectAccessor::GetUnit(*this, (*iter))))
                         break;
                 if (!summon)
                     continue;
@@ -19576,7 +19547,7 @@ bool Unit::SpellProcTriggered(Unit* victim, DamageInfo* dmgInfoProc, AuraEffect*
                 Unit* summon = nullptr;
                 GuidList* summonList = GetSummonList(itr->slot);
                 for (GuidList::const_iterator iter = summonList->begin(); iter != summonList->end(); ++iter)
-                    if(summon = ObjectAccessor::GetUnit(*this, (*iter)))
+                    if((summon = ObjectAccessor::GetUnit(*this, (*iter))))
                         break;
                 if (!summon)
                     continue;
@@ -24380,6 +24351,11 @@ void Unit::_EnterVehicle(Vehicle* vehicle, int8 seatId, AuraApplication const* a
     vehicle->AddPassenger(this, seatId);
 }
 
+bool Unit::IsFalling() const
+{
+    return m_movementInfo.HasMovementFlag(MOVEMENTFLAG_FALLING | MOVEMENTFLAG_FALLING_FAR) || movespline->isFalling();
+}
+
 bool Unit::CanSwim() const
 {
     // Mirror client behavior, if this method returns false then client will not use swimming animation and for players will apply gravity as if there was no water
@@ -24490,6 +24466,9 @@ void Unit::_ExitVehicle(Position const* exitPosition)
     }
 
     AddUnitState(UNIT_STATE_MOVE);
+
+    if (player)
+        player->SetFallInformation(0, GetPositionZ());
 
     if (HasUnitMovementFlag(MOVEMENTFLAG_ROOT))
         SetRooted(false);
@@ -25054,37 +25033,34 @@ bool Unit::SetSwim(bool enable)
 
 bool Unit::SetCanFly(bool enable)
 {
-    //if (enable == HasUnitMovementFlag(MOVEMENTFLAG_CAN_FLY))
-        //return false;
+    if (enable == HasUnitMovementFlag(MOVEMENTFLAG_CAN_FLY))
+        return false;
 
-    if (!IsPlayer())
+    if (enable)
     {
-        if (enable)
-        {
-            AddUnitMovementFlag(MOVEMENTFLAG_CAN_FLY);
-            RemoveUnitMovementFlag(MOVEMENTFLAG_SWIMMING | MOVEMENTFLAG_SPLINE_ELEVATION);
-            SetFall(false);
-        }
-        else
-        {
-            RemoveUnitMovementFlag(MOVEMENTFLAG_CAN_FLY | MOVEMENTFLAG_MASK_MOVING_FLY);
-            if (!IsLevitating())
-                SetFall(true);
-        }
+        AddUnitMovementFlag(MOVEMENTFLAG_CAN_FLY);
+        RemoveUnitMovementFlag(MOVEMENTFLAG_SWIMMING | MOVEMENTFLAG_SPLINE_ELEVATION);
+        SetFall(false);
+    }
+    else
+    {
+        RemoveUnitMovementFlag(MOVEMENTFLAG_CAN_FLY | MOVEMENTFLAG_MASK_MOVING_FLY);
+        if (!IsLevitating())
+            SetFall(true);
     }
 
     static OpcodeServer const flyOpcodeTable[2][2] = {{SMSG_MOVE_SPLINE_UNSET_FLYING, SMSG_MOVE_UNSET_CAN_FLY}, {SMSG_MOVE_SPLINE_SET_FLYING, SMSG_MOVE_SET_CAN_FLY}};
 
-    if (!enable && IsPlayer())
+    bool player = GetTypeId() == TYPEID_PLAYER && ToPlayer()->m_mover->GetTypeId() == TYPEID_PLAYER;
+    if (!enable && player)
         ToPlayer()->SetFallInformation(0, GetPositionZ());
 
-    if (Player* playerMover = GetPlayerMover())
+    if (player)
     {
         WorldPackets::Movement::MoveSetFlag packet(flyOpcodeTable[enable][1]);
         packet.MoverGUID = GetGUID();
         packet.SequenceIndex = m_sequenceIndex++;
-        playerMover->SendDirectMessage(packet.Write());
-        playerMover->GetCheatData()->OrderSent(flyOpcodeTable[enable][1]);
+        SendMessageToSet(packet.Write(), true);
     }
     else
     {
@@ -25383,11 +25359,6 @@ void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* target)
                     if (Garrison* garr = target->GetGarrisonPtr())
                         if (!garr->GetCountOFollowers())
                             appendValue &= ~UNIT_NPC_FLAG2_GARRISON_MISSION_NPC;
-
-                if (appendValue & UNIT_NPC_FLAG2_SHIPMENT_CRAFTER)
-                    if (Garrison* garr = target->GetGarrisonPtr())
-                        if (!garr->GetCountOFollowers())
-                            appendValue &= ~UNIT_NPC_FLAG2_SHIPMENT_CRAFTER;
 
                 *data << uint32(appendValue);
             }
@@ -26661,7 +26632,7 @@ void Unit::GenerateLoot(Creature* creature, Player* anyLooter)
                     if (lootPers->isLooted())
                         looter->RemoveLoot(creature->GetGUID());
 
-                    if (group = looter->GetGroup())
+                    if ((group = looter->GetGroup()))
                     {
                         for (GroupReference* iter = group->GetFirstMember(); iter != nullptr; iter = iter->next())
                         {
@@ -27931,6 +27902,8 @@ void Unit::Clear()
             m_currentSpells[i]->SetReferencedFromCurrent(false);
             m_currentSpells[i] = nullptr;
         }
+
+    m_Events.KillAllEvents(true);
 
     _DeleteRemovedAuras();
 

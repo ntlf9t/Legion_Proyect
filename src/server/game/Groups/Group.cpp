@@ -45,6 +45,7 @@
 #include "FunctionProcessor.h"
 #include "DatabaseEnv.h"
 #include "PlayerDefines.h"
+#include "QuestData.h"
 
 Roll::Roll(ObjectGuid _guid, LootItem const& li) : itemCount(li.count), totalPlayersRolling(0), totalNeed(0), totalGreed(0), totalPass(0), itemSlot(0), aoeSlot(0), rollVoteMask(ROLL_ALL_TYPE_NO_DISENCHANT)
 {
@@ -1452,26 +1453,22 @@ void Group::DoRollForAllMembers(ObjectGuid guid, uint8 slot, uint32 mapid, Loot*
     SendLootStartRoll(mapid, *r);
 }
 
-void Group::CountRollVote(ObjectGuid playerGUID, uint8 AoeSlot, uint8 Choice)
+bool Group::CountRollVote(ObjectGuid playerGUID, uint8 AoeSlot, uint8 Choice)
 {
     auto rollI = GetRoll(AoeSlot);
     if (rollI == RollId.end())
-        return;
+        return false;
 
     auto roll = *rollI;
 
     auto itr = roll->playerVote.find(playerGUID);
     // this condition means that player joins to the party after roll begins
-    if (itr == roll->playerVote.end())
-        return;
+    if (itr == roll->playerVote.end() || itr->second != NOT_EMITED_YET)
+        return false;
 
     if (roll->getLoot())
-    {
         if (roll->getLoot()->items.empty())
-            return;
-    }
-    else
-        return;
+            return false;
 
     switch (Choice)
     {
@@ -1501,6 +1498,8 @@ void Group::CountRollVote(ObjectGuid playerGUID, uint8 AoeSlot, uint8 Choice)
 
     if (roll->TotalEmited() >= roll->totalPlayersRolling)
         CountTheRoll(rollI);
+
+    return true;
 }
 
 //called when roll timer expires
@@ -1594,7 +1593,7 @@ void Group::CountTheRoll(Rolls::iterator rollI)
                 }
                 else
                 {
-                    item->is_blocked = false;
+                    item->rollWinnerGUID = player->GetGUID();
                     player->SendEquipError(msg, nullptr, nullptr, roll->item.ItemID);
                 }
             }
@@ -1644,7 +1643,7 @@ void Group::CountTheRoll(Rolls::iterator rollI)
                     }
                     else
                     {
-                        item->is_blocked = false;
+                        item->rollWinnerGUID = player->GetGUID();
                         player->SendEquipError(msg, nullptr, nullptr, roll->item.ItemID);
                     }
                 }
@@ -1796,7 +1795,7 @@ void Group::SendUpdateToPlayer(ObjectGuid playerGUID, MemberSlot* slot /*= nullp
             partyUpdate.LfgInfos->MyGearDiff = 1.0f;
         partyUpdate.LfgInfos->MyFirstReward = lfgState != lfg::LFG_STATE_FINISHED_DUNGEON;
 
-        partyUpdate.LfgInfos->MyRandomSlot = [player, QueueId]() -> uint32
+        /*partyUpdate.LfgInfos->MyRandomSlot = [player, QueueId]() -> uint32
         {
             auto const& selectedDungeons = sLFGMgr->GetSelectedDungeons(player->GetGUID(), QueueId);
             if (selectedDungeons.size() == 1)
@@ -1805,10 +1804,16 @@ void Group::SendUpdateToPlayer(ObjectGuid playerGUID, MemberSlot* slot /*= nullp
                         return dungeon->ID;
 
             return 0;
-        }();
+        }();*/
+		partyUpdate.LfgInfos->MyRandomSlot = sLFGMgr->GetSelectedRandomDungeon(player->GetGUID(), QueueId);
 
         partyUpdate.LfgInfos->BootCount = 0;
         partyUpdate.LfgInfos->Aborted = false;
+
+        if (lfg::LfgReward const* reward = sLFGMgr->GetDungeonReward(partyUpdate.LfgInfos->MyRandomSlot, player->getLevel()))
+            if (Quest const* quest = sQuestDataStore->GetQuestTemplate(reward->firstQuest))
+                partyUpdate.LfgInfos->MyFirstReward = player->CanRewardQuest(quest, false);
+
         partyUpdate.LfgInfos->MyStrangerCount = 0;
         partyUpdate.LfgInfos->MyKickVoteCount = 0;
     }

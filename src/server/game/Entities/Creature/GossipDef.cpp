@@ -438,7 +438,7 @@ void PlayerMenu::SendQuestGiverQuestDetails(Quest const* quest, ObjectGuid npcGU
     packet.PortraitGiver = quest->QuestGiverPortrait;
     packet.PortraitTurnIn = quest->QuestTurnInPortrait;
     packet.AutoLaunched = activateAccept;
-    packet.QuestFlags[0] = quest->GetFlags();
+    packet.QuestFlags[0] = quest->GetFlags() & (sWorld->getBoolConfig(CONFIG_QUEST_IGNORE_AUTO_ACCEPT) ? ~QUEST_FLAGS_AUTO_ACCEPT : ~0);
     packet.QuestFlags[1] = quest->FlagsEx;
     packet.SuggestedPartyMembers = quest->SuggestedPlayers;
 

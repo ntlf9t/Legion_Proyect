@@ -44,6 +44,8 @@ namespace WorldPackets
     }
 }
 
+#define MAX_SPELL_RANGE_TOLERANCE 3.0f
+
 enum SpellCastFlags
 {
     CAST_FLAG_NONE               = 0x00000000,

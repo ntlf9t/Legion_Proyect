@@ -31,46 +31,35 @@
 template<>
 void RandomMovementGenerator<Creature>::_setRandomLocation(Creature& creature)
 {
-    float respX, respY, respZ, respO /*, travelDistZ*/;
+    float respX, respY, respZ, respO, destX, destY, destZ, travelDistZ;
     creature.GetHomePosition(respX, respY, respZ, respO);
+    Map const* map = creature.GetMap();
 
     // For 2D/3D system selection
+    //bool is_land_ok  = creature.CanWalk();                // not used?
+    //bool is_water_ok = creature.CanSwim();                // not used?
     bool is_air_ok = creature.CanFly();
 
     const float angle = float(rand_norm()) * static_cast<float>(M_PI*2.0f);
-    const float range = float(frand(rand_norm(), frand(0.8f, 1.0f)) * wander_distance * (is_air_ok ? 4.0f : 2.0f));
+    const float range = float(rand_norm()) * wander_distance;
+    const float distanceX = range * std::cos(angle);
+    const float distanceY = range * std::sin(angle);
 
-    const float distanceX = range * cos(angle);
-    const float distanceY = range * sin(angle);
-
-    float destX = respX + distanceX;
-    float destY = respY + distanceY;
-    float destZ = creature.GetPositionZ();
-
-
-    if (creature.GetTransport())
-    {
-        Position pos;
-        creature.GetFirstCollisionPosition(pos, range, angle);
-        destX = pos.m_positionX;
-        destY = pos.m_positionY;
-        destZ = pos.m_positionZ;
-    }
-
-    creature.UpdateAllowedPositionZ(destX, destY, destZ);
+    destX = respX + distanceX;
+    destY = respY + distanceY;
 
     // prevent invalid coordinates generation
     Trinity::NormalizeMapCoord(destX);
     Trinity::NormalizeMapCoord(destY);
 
-    /*travelDistZ = distanceX*distanceX + distanceY*distanceY;
+    travelDistZ = range;                                    // sin^2+cos^2=1, so travelDistZ=range^2; no need for sqrt below
 
     if (is_air_ok)                                          // 3D system above ground and above water (flying mode)
     {
         // Limit height change
-        const float distanceZ = float(rand_norm()) * sqrtf(travelDistZ)/2.0f;
+        const float distanceZ = float(rand_norm()) * travelDistZ/2.0f;
         destZ = respZ + distanceZ;
-        float levelZ = creature->GetWaterOrGroundLevel(destX, destY, destZ-2.0f);
+		float levelZ = map->GetWaterOrGroundLevel(creature.GetPhases(), destX, destY, destZ-2.5f);
 
         // Problem here, we must fly above the ground and water, not under. Let's try on next tick
         if (levelZ >= destZ)
@@ -80,50 +69,45 @@ void RandomMovementGenerator<Creature>::_setRandomLocation(Creature& creature)
     else                                                    // 2D only
     {
         // 10.0 is the max that vmap high can check (MAX_CAN_FALL_DISTANCE)
-        travelDistZ = travelDistZ >= 100.0f ? 10.0f : sqrtf(travelDistZ);
+        travelDistZ = travelDistZ >= 10.0f ? 10.0f : travelDistZ;
 
         // The fastest way to get an accurate result 90% of the time.
         // Better result can be obtained like 99% accuracy with a ray light, but the cost is too high and the code is too long.
-        destZ = creature.GetHeight(destX, destY, respZ+travelDistZ-2.0f, false);
+        destZ = map->GetHeight(destX, destY, respZ+travelDistZ-2.0f, false);
 
-        if (fabs(destZ - respZ) > travelDistZ)              // Map check
+        if (std::fabs(destZ - respZ) > travelDistZ)              // Map check
         {
             // Vmap Horizontal or above
-            destZ = creature.GetHeight(destX, destY, respZ - 2.0f, true);
+            destZ = map->GetHeight(creature.GetPhases(), destX, destY, respZ - 2.0f, true);
 
-            if (fabs(destZ - respZ) > travelDistZ)
+            if (std::fabs(destZ - respZ) > travelDistZ)
             {
                 // Vmap Higher
-                destZ = creature.GetHeight(destX, destY, respZ+travelDistZ-2.0f, true);
+                destZ = map->GetHeight(creature.GetPhases(), destX, destY, respZ+travelDistZ-2.0f, true);
 
                 // let's forget this bad coords where a z cannot be find and retry at next tick
-                if (fabs(destZ - respZ) > travelDistZ)
+                if (std::fabs(destZ - respZ) > travelDistZ)
                     return;
             }
         }
-    }*/
-
-    PathGenerator path(&creature);
-
-    if (!path.CalculatePath(destX, destY, destZ) || path.GetPathType() & PATHFIND_NOPATH)
-    {
-        i_nextMoveTime.Reset(urand(500, 1500));
-        return;
     }
 
-    creature.AddUnitState(UNIT_STATE_ROAMING | UNIT_STATE_ROAMING_MOVE);
-
-    Movement::MoveSplineInit init(creature);
-    if (creature.GetTransport())
-        init.DisableTransportPathTransformations();
-    init.MovebyPath(path.GetPath());
-    init.SetWalk((irand(0, RUNNING_CHANCE_RANDOMMV) > 0) ? true : false);
-    int32 traveltime = init.Launch();
-
-    if (is_air_ok)
+ if (is_air_ok)
         i_nextMoveTime.Reset(0);
     else
-        i_nextMoveTime.Reset(traveltime + urand(500, 2000));
+    {
+        if (roll_chance_i(50))
+            i_nextMoveTime.Reset(urand(5000, 10000));
+        else
+            i_nextMoveTime.Reset(urand(50, 400));
+    }
+
+    creature.AddUnitState(UNIT_STATE_ROAMING_MOVE);
+
+    Movement::MoveSplineInit init(creature);
+    init.MoveTo(destX, destY, destZ);
+    init.SetWalk(true);
+    init.Launch();
 
     //Call for creature group update
     if (creature.GetFormation() && creature.GetFormation()->getLeader() == &creature)

@@ -911,8 +911,8 @@ Unit* Aura::GetCaster() const
         return nullptr;
     if (GetOwner()->GetGUID() == GetCasterGUID())
         return GetUnitOwner();
-    if (AuraApplication const* aurApp = const_cast<Aura*>(this)->GetApplicationOfTarget(GetCasterGUID()))
-        return aurApp->GetTarget();
+    //if (AuraApplication const* aurApp = const_cast<Aura*>(this)->GetApplicationOfTarget(GetCasterGUID()))
+    //   return aurApp->GetTarget();
 
     return ObjectAccessor::GetUnit(*GetOwner(), GetCasterGUID());
 }
@@ -1362,14 +1362,6 @@ uint8 Aura::CalcMaxCharges(Unit* caster, bool add) const
 {
     uint32 maxProcCharges = m_spellInfo->GetAuraOptions(m_diffMode)->ProcCharges;
 
-    if (SpellProcEntry const* procEntry = sSpellMgr->GetSpellProcEntry(GetId()))
-    {
-        if (add)
-            maxProcCharges = procEntry->modcharges;
-        else
-            maxProcCharges = procEntry->charges;
-    }
-
     if (caster)
         if (Player* modOwner = caster->GetSpellModOwner())
         {
@@ -1463,13 +1455,6 @@ void Aura::SetStackAmount(uint16 stackAmount)
 
 bool Aura::ModStackAmount(int16 num, AuraRemoveMode removeMode)
 {
-    if (SpellProcEntry const* procEntry = sSpellMgr->GetSpellProcEntry(GetId()))
-        if (procEntry->modcharges != 0)
-        {
-            ModCharges(num, removeMode);
-            return false;
-        }
-
     int16 stackAmount = m_stackAmount + num;
     int16 maxStackAmount = m_spellInfo->GetAuraOptions(GetSpawnMode())->CumulativeAura;
 
@@ -2838,150 +2823,6 @@ bool Aura::CanStackWith(Aura const* existingAura) const
     }
 
     return true;
-}
-
-bool Aura::IsProcOnCooldown() const
-{
-    /*if (m_procCooldown)
-    {
-        if (m_procCooldown > time(NULL))
-            return true;
-    }*/
-    return false;
-}
-
-void Aura::AddProcCooldown(uint32 /*msec*/)
-{
-    //m_procCooldown = time(NULL) + msec;
-}
-
-void Aura::PrepareProcToTrigger(AuraApplication* /*aurApp*/, ProcEventInfo& /*eventInfo*/)
-{
-    // take one charge, aura expiration will be handled in Aura::TriggerProcOnEvent (if needed)
-    if (HasAuraAttribute(AURA_ATTR_IS_USING_CHARGES))
-    {
-        --m_procCharges;
-        SetNeedClientUpdateForTargets();
-    }
-
-    SpellProcEntry const* procEntry = sSpellMgr->GetSpellProcEntry(GetId());
-
-    ASSERT(procEntry);
-
-    // cooldowns should be added to the whole aura (see 51698 area aura)
-    AddProcCooldown(procEntry->cooldown);
-}
-
-bool Aura::IsProcTriggeredOnEvent(AuraApplication* aurApp, ProcEventInfo& eventInfo) const
-{
-    SpellProcEntry const* procEntry = sSpellMgr->GetSpellProcEntry(GetId());
-    // only auras with spell proc entry can trigger proc
-    if (!procEntry)
-        return false;
-
-    // check if we have charges to proc with
-    if (HasAuraAttribute(AURA_ATTR_IS_USING_CHARGES) && !GetCharges())
-        return false;
-
-    // check proc cooldown
-    if (IsProcOnCooldown())
-        return false;
-
-    // TODO:
-    // something about triggered spells triggering, and add extra attack effect
-
-    // do checks against db data
-    if (!sSpellMgr->CanSpellTriggerProcOnEvent(*procEntry, eventInfo))
-        return false;
-
-    // do checks using conditions table
-    ConditionList conditions = sConditionMgr->GetConditionsForNotGroupedEntry(CONDITION_SOURCE_TYPE_SPELL_PROC, GetId());
-    ConditionSourceInfo condInfo = ConditionSourceInfo(eventInfo.GetActor(), eventInfo.GetActionTarget());
-    if (!sConditionMgr->IsObjectMeetToConditions(condInfo, conditions))
-        return false;
-
-    // TODO:
-    // do allow additional requirements for procs
-    // this is needed because this is the last moment in which you can prevent aura charge drop on proc
-    // and possibly a way to prevent default checks (if there're going to be any)
-
-    // Check if current equipment meets aura requirements
-    // do that only for passive spells
-    // TODO: this needs to be unified for all kinds of auras
-    Unit* target = aurApp->GetTarget();
-    if (IsPassive() && target->IsPlayer())
-    {
-        if (GetSpellInfo()->EquippedItemClass == ITEM_CLASS_WEAPON)
-        {
-            if (target->ToPlayer()->IsInFeralForm())
-                return false;
-
-            if (eventInfo.GetDamageInfo())
-            {
-                WeaponAttackType attType = eventInfo.GetDamageInfo()->GetAttackType();
-                Item* item = nullptr;
-                if (attType == BASE_ATTACK)
-                    item = target->ToPlayer()->GetUseableItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
-                else if (attType == OFF_ATTACK)
-                    item = target->ToPlayer()->GetUseableItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
-
-                if (!item || item->CantBeUse() || item->GetTemplate()->GetClass() != ITEM_CLASS_WEAPON)
-                    return false;
-
-                if (GetSpellInfo()->EquippedItemSubClassMask && !((1<<item->GetTemplate()->GetSubClass()) & GetSpellInfo()->EquippedItemSubClassMask))
-                    return false;
-            }
-        }
-        else if (GetSpellInfo()->EquippedItemClass == ITEM_CLASS_ARMOR)
-        {
-            // Check if player is wearing shield
-            Item* item = target->ToPlayer()->GetUseableItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
-            if (!item || item->CantBeUse() || item->GetTemplate()->GetClass() != ITEM_CLASS_ARMOR)
-                return false;
-
-            if (GetSpellInfo()->EquippedItemSubClassMask && !((1<<item->GetTemplate()->GetSubClass()) & GetSpellInfo()->EquippedItemSubClassMask))
-                return false;
-        }
-    }
-
-    return roll_chance_f(CalcProcChance(*procEntry, eventInfo));
-}
-
-float Aura::CalcProcChance(SpellProcEntry const& procEntry, ProcEventInfo& eventInfo) const
-{
-    float chance = procEntry.chance;
-    // calculate chances depending on unit with caster's data
-    // so talents modifying chances and judgements will have properly calculated proc chance
-    if (Unit* caster = GetCaster())
-    {
-        // calculate ppm chance if present and we're using weapon
-        if (eventInfo.GetDamageInfo() && procEntry.ratePerMinute != 0)
-        {
-            uint32 WeaponSpeed = caster->GetAttackTime(eventInfo.GetDamageInfo()->GetAttackType());
-            chance = caster->GetPPMProcChance(WeaponSpeed, procEntry.ratePerMinute, GetSpellInfo());
-        }
-        // apply chance modifer aura, applies also to ppm chance (see improved judgement of light spell)
-        if (Player* modOwner = caster->GetSpellModOwner())
-            modOwner->ApplySpellMod(GetId(), SPELLMOD_CHANCE_OF_SUCCESS, chance);
-    }
-    return chance;
-}
-
-void Aura::TriggerProcOnEvent(AuraApplication* aurApp, ProcEventInfo& eventInfo)
-{
-    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-    {
-        if (GetSpellInfo()->EffectMask < uint32(1 << i))
-            break;
-
-        if (aurApp->HasEffect(i))
-            // OnEffectProc / AfterEffectProc hooks handled in AuraEffect::HandleProc()
-            GetEffect(i)->HandleProc(aurApp, eventInfo, static_cast<SpellEffIndex>(i));
-    }
-
-    // Remove aura if we've used last charge to proc
-    if (HasAuraAttribute(AURA_ATTR_IS_USING_CHARGES) && !GetCharges())
-        Remove();
 }
 
 void Aura::_DeleteRemovedApplications()

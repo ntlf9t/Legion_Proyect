@@ -597,6 +597,10 @@ void Creature::RemoveCorpse(bool setSpawnTime)
     if (setSpawnTime)
         m_respawnTime = time(nullptr) + respawnDelay;
 
+    // if corpse was removed during falling, the falling will continue and override relocation to respawn position
+    //if (IsFalling())
+    //    StopMoving();
+
     float x, y, z, o;
     GetRespawnPosition(x, y, z, &o);
     SetHomePosition(x, y, z, o);
@@ -661,7 +665,7 @@ bool Creature::InitEntry(uint32 entry, uint32 /*team*/, const CreatureData* data
         LoadEquipment(data->equipmentId);
     }
 
-    SetName((minfo->gender == GENDER_MALE || cinfo->NameAlt[0].empty()) ? cinfo->Name[0] : cinfo->NameAlt[0]);
+	SetName((minfo->gender == GENDER_MALE || cinfo->NameAlt[0].empty()) ? cinfo->Name[0] : cinfo->NameAlt[0]);
 
     //Set default
     SetFloatValue(UNIT_FIELD_MOD_CASTING_SPEED, 1.0f);
@@ -986,7 +990,18 @@ void Creature::Update(uint32 diff)
                     if (targetGuid == dbtableHighGuid) // if linking self, never respawn (check delayed to next day)
                         SetRespawnTime(DAY);
                     else
-                        m_respawnTime = (now > linkedRespawntime ? now : linkedRespawntime)+urand(5, MINUTE); // else copy time from master and add a little
+                    {
+                        // else copy time from master and add a little
+                        time_t baseRespawnTime = std::max(linkedRespawntime, now);
+                        time_t const offset = urand(5, MINUTE);
+
+                        // linked guid can be a boss, uses std::numeric_limits<time_t>::max to never respawn in that instance
+                        // we shall inherit it instead of adding and causing an overflow
+                        if (baseRespawnTime <= std::numeric_limits<time_t>::max() - offset)
+                            m_respawnTime = baseRespawnTime + offset;
+                        else
+                            m_respawnTime = std::numeric_limits<time_t>::max();
+                    }
                     SaveRespawnTime(); // also save to DB immediately
                 }
             }
@@ -2559,17 +2574,16 @@ void Creature::setDeathState(DeathState s)
             m_formation->FormationReset(true);
 
         if (CanFly() || IsFlying() || (GetMiscStandValue() & UNIT_BYTE1_FLAG_HOVER))
-            i_motionMaster.MoveFall();
+            GetMotionMaster()->MoveFall();
 
         Unit::setDeathState(CORPSE);
     }
     else if (s == JUST_RESPAWNED)
     {
-        //if (isPet())
-        //    setActive(true);
         SetFullHealth();
         SetLootRecipient(nullptr);
         ResetPlayerDamageReq();
+
         CreatureTemplate const* cinfo = GetCreatureTemplate();
         SetWalk(true);
         if (cinfo->InhabitType & INHABIT_AIR && cinfo->InhabitType & INHABIT_GROUND)
@@ -2789,7 +2803,7 @@ bool Creature::isElite() const
         return false;
 
     uint32 rank = GetCreatureTemplate()->Classification;
-    return rank != CREATURE_CLASSIFICATION_NORMAL && rank != CREATURE_CLASSIFICATION_RARE;
+    return rank == CREATURE_CLASSIFICATION_ELITE || rank == CREATURE_CLASSIFICATION_RARE_ELITE || rank == CREATURE_CLASSIFICATION_WORLDBOSS;
 }
 
 bool Creature::isWorldBoss() const
@@ -2875,7 +2889,7 @@ SpellInfo const* Creature::reachWithSpellCure(Unit* victim)
             if (spellInfo->EffectMask < uint32(1 << j))
                 break;
 
-            if ((spellInfo->Effects[j]->Effect == SPELL_EFFECT_HEAL))
+            if ((spellInfo->Effects[j]->Effect = SPELL_EFFECT_HEAL))
             {
                 bcontinue = false;
                 break;

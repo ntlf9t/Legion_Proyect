@@ -174,7 +174,7 @@ struct boss_orebender_gorashan : public BossAI
         }
     }
 
-    void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/, DamageEffectType /*dmgType*/)
+    void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/, DamageEffectType /*dmgType*/) override
     {
         if (HealthBelowPct(healthPct))
         {

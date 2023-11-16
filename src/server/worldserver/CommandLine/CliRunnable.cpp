@@ -71,24 +71,19 @@ char * command_finder(const char* text, int state)
 
 char ** cli_completion(const char * text, int start, int /*end*/)
 {
-    char ** matches;
-    matches = (char**)NULL;
+    char** matches = NULL;
 
-    if (start == 0)
-        matches = rl_completion_matches((char*)text, &command_finder);
-/*#ifdef PLATFORM != PLATFORM_APPLE
-    else
+    if (start)
         rl_bind_key('\t', rl_abort);
-#endif*/
-    return (matches);
+    else
+        matches = rl_completion_matches((char*)text, &command_finder);
+    return matches;
 }
 
 int cli_hook_func(void)
 {
-#ifdef PLATFORM != PLATFORM_APPLE
        if (World::IsStopped())
            rl_done = 1;
-#endif
        return 0;
 }
 

@@ -124,9 +124,9 @@ public:
                 if (pPlayer && pPlayer->GetGroup())
                 {
                     if (me->GetMap()->GetDifficultyID() == DIFFICULTY_NORMAL)
-                        sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 1208);
+                        sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 1208, me->GetMap());
                     if (me->GetMap()->GetDifficultyID() == DIFFICULTY_HEROIC)
-                        sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 1209);
+                        sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 1209, me->GetMap());
                 }
             }
         }

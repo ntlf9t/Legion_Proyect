@@ -262,7 +262,7 @@ class npc_neptulon : public CreatureScript
                         if (Group* group = player->GetGroup())
                         {
                             if (sLFGMgr->GetQueueId(1146))
-                                sLFGMgr->FinishDungeon(player->GetGroup()->GetGUID(), 1146);
+                                sLFGMgr->FinishDungeon(player->GetGroup()->GetGUID(), 1146, me->GetMap());
 
                             if (player->GetGuildId() && group->IsGuildGroup(player->GetGuildGUID(), true, true))
                                 group->UpdateGuildAchievementCriteria(CRITERIA_TYPE_BE_SPELL_TARGET, SPELL_KILL_OZUMAT, 0, 0, NULL, me);

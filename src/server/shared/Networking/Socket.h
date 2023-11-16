@@ -189,6 +189,9 @@ protected:
     {
         boost::system::error_code err;
         _socket.set_option(tcp::no_delay(enable), err);
+        if (err)
+            TC_LOG_DEBUG(LOG_FILTER_NETWORKIO, "Socket::SetNoDelay: failed to set_option(boost::asio::ip::tcp::no_delay) for %s - %d (%s)",
+                GetRemoteIpAddress().to_string().c_str(), err.value(), err.message().c_str());
     }
 
     Stream& underlying_stream()

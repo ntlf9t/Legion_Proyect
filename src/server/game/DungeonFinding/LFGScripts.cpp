@@ -40,12 +40,8 @@ void LFGPlayerScript::OnLogout(Player* player)
 
 	if (!player->GetGroup())
 		sLFGMgr->LeaveLfg(player->GetGUID());
-
-    if (!player->GetGroup())
-        sLFGMgr->LeaveLfg(player->GetGUID());
-	// Arreglo temporal dado que logear en Cronoviaje tufa las stadisticas
-	//if (player->GetMap()->GetLootDifficulty() == DIFFICULTY_TIMEWALKING || player->GetMap()->GetLootDifficulty() == DIFFICULTY_TIMEWALKING_RAID)
-	//	player->SavePositionInDB(player->m_homebindMapId, player->m_homebindX, player->m_homebindY, player->m_homebindZ, 1.0f, player->m_homebindAreaId, player->GetGUID());
+    else if (player->GetSession()->PlayerDisconnected())
+        sLFGMgr->LeaveLfg(player->GetGUID(), true);
 
 }
 
@@ -152,8 +148,10 @@ void LFGGroupScript::OnRemoveMember(Group* group, ObjectGuid const& guid, Remove
     uint32 queueId = sLFGMgr->GetQueueId(gguid);
 
     sLFGMgr->StartAllOtherQueue(guid, queueId);
+	
+	bool isLFG = group->isLFGGroup();
 
-    if (method == GROUP_REMOVEMETHOD_KICK)        // Player have been kicked
+    if (isLFG && method == GROUP_REMOVEMETHOD_KICK)        // Player have been kicked
     {
         /// @todo - Update internal kick cooldown of kicker
         std::string str_reason = "";
@@ -183,6 +181,8 @@ void LFGGroupScript::OnRemoveMember(Group* group, ObjectGuid const& guid, Remove
     {
         if (method == GROUP_REMOVEMETHOD_LEAVE && state == LFG_STATE_DUNGEON && players >= sLFGMgr->GetVotesNeededForKick(group->GetGUID()))
             player->CastSpell(player, LFG_SPELL_DUNGEON_DESERTER, true);
+        else if (method == GROUP_REMOVEMETHOD_KICK_LFG)
+            player->RemoveAurasDueToSpell(LFG_SPELL_DUNGEON_COOLDOWN);
         //else if (state == LFG_STATE_BOOT)
             // Update internal kick cooldown of kicked
 

@@ -490,7 +490,7 @@ void World::LoadConfigSettings(bool reload)
     }
 
     ///- Read the player limit and the Message of the day from the config file
-    SetPlayerAmountLimit(sConfigMgr->GetIntDefault("PlayerLimit", 10000));
+    SetPlayerAmountLimit(sConfigMgr->GetIntDefault("PlayerLimit", 100));
     SetMotd(sConfigMgr->GetStringDefault("Motd", "Welcome to a Trinity Core Server."));
 
     ///- Read ticket system setting from the config file
@@ -1451,7 +1451,7 @@ void World::LoadConfigSettings(bool reload)
     m_bool_configs[CONFIG_CHECK_MT_SESSION] = sConfigMgr->GetBoolDefault("World.MT.Session", false);
 
     // Garrison
-    m_bool_configs[CONFIG_DISABLE_GARE_UPGRADE] = sConfigMgr->GetBoolDefault("Garrisone.DisableUpgrade", true);
+    m_bool_configs[CONFIG_DISABLE_GARE_UPGRADE] = sConfigMgr->GetBoolDefault("Garrison.DisableUpgrade", false);
 
     // For test server not save cooldown for personal loot
     m_bool_configs[CONFIG_IS_TEST_SERVER] = sConfigMgr->GetBoolDefault("Is.Test.Server", false);
@@ -1775,8 +1775,8 @@ void World::SetInitialWorldSettings()
     TC_LOG_INFO(LOG_FILTER_SERVER_LOADING, "Loading Spell Proc Event conditions...");
     sSpellMgr->LoadSpellProcEvents();
 
-    TC_LOG_INFO(LOG_FILTER_SERVER_LOADING, "Loading Spell Proc conditions and data...");
-    sSpellMgr->LoadSpellProcs();
+    /*TC_LOG_INFO(LOG_FILTER_SERVER_LOADING, "Loading Spell Proc conditions and data...");
+    sSpellMgr->LoadSpellProcs();*/
 
     TC_LOG_INFO(LOG_FILTER_SERVER_LOADING, "Loading Spell Bonus Data...");
     sSpellMgr->LoadSpellBonusess();

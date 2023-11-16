@@ -35,7 +35,7 @@ public:
         std::list<ObjectGuid> yalnuGUIDconteiner;
         ObjectGuid yalnuGUIDdoor;
 
-        void Initialize()
+        void Initialize() override
         {
             LoadDoorData(doorData);
             yalnuGUIDdoor.Clear();
@@ -127,7 +127,7 @@ public:
 
         void SetData(uint32 type, uint32 data) override {}
 
-        ObjectGuid GetGuidData(uint32 type) const
+        ObjectGuid GetGuidData(uint32 type) const override
         {
             std::map<uint32, ObjectGuid>::const_iterator itr = protectorsGUIDconteiner.find(type);
             if (itr != protectorsGUIDconteiner.end())
@@ -136,7 +136,7 @@ public:
             return ObjectGuid::Empty;
         }
 
-        uint32 GetData(uint32 type) const
+        uint32 GetData(uint32 type) const override
         {
             return 0;
         }

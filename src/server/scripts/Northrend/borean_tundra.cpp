@@ -343,8 +343,6 @@ public:
 ## mob_nerubar_victim
 ######*/
 
-#define WARSONG_PEON        25270
-
 const uint32 nerubarVictims[3] =
 {
     45526, 45527, 45514
@@ -372,12 +370,12 @@ public:
             if (player->GetQuestStatus(11611) == QUEST_STATUS_INCOMPLETE)
             {
                 uint8 uiRand = urand(0, 99);
-                if (uiRand < 25)
+                if (uiRand < 30)
                 {
                     player->CastSpell(me, 45532, true);
-                    player->KilledMonsterCredit(WARSONG_PEON, ObjectGuid::Empty);
+                    player->KilledMonsterCredit(25270, ObjectGuid::Empty);
                 }
-                else if (uiRand < 75)
+                else if (uiRand < 70)
                     player->CastSpell(me, nerubarVictims[urand(0, 2)], true);
             }
         }

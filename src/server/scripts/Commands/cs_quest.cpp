@@ -29,7 +29,7 @@ public:
     {
         static std::vector<ChatCommand> questCommandTable =
         {
-            { "autocomplete",   SEC_ADMINISTRATOR,  false, &HandleQuestAutocomplete,           ""},
+			{ "autocomplete",   SEC_ADMINISTRATOR,  false, &HandleQuestAutocomplete,           ""},
             { "add",            SEC_ADMINISTRATOR,  false, &HandleQuestAdd,                    ""},
             { "complete",       SEC_ADMINISTRATOR,  false, &HandleQuestComplete,               ""},
             { "remove",         SEC_ADMINISTRATOR,  false, &HandleQuestRemove,                 ""},

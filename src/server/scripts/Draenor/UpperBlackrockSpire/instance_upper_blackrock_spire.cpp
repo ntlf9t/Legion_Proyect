@@ -45,7 +45,7 @@ public:
         uint8 runeglow_count;
         uint32 EventFinalJenkins{};
 
-        void Initialize()
+        void Initialize() override
         {
             LoadDoorData(doorData);
             
@@ -156,12 +156,12 @@ public:
             }
         }
 
-        ObjectGuid GetGuidData(uint32 type) const
+        ObjectGuid GetGuidData(uint32 type) const override
         {
             return ObjectGuid::Empty;
         }
 
-        uint32 GetData(uint32 type) const
+        uint32 GetData(uint32 type) const override
         {
             switch (type)
             {

@@ -207,7 +207,7 @@ public:
             {
                 Player* pPlayer = players.begin()->getSource();
                 if (pPlayer && pPlayer->GetGroup())
-                    sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 286);
+                    sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 286, me->GetMap());
             }
 
             if (Creature* ahune = instance->instance->GetCreature(instance->GetGuidData(NPC_AHUNE)))

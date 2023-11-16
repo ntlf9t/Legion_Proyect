@@ -29,14 +29,14 @@ public:
     {
         static std::vector<ChatCommand> achievementCommandTable=
         {
-            { "add",            SEC_ADMINISTRATOR,  false,  &HandleAchievementAddCommand,      ""},
-            { "criteria",       SEC_ADMINISTRATOR,  false,  &HandleAchievementCriteriaCommand, ""},
-            { "info",           SEC_ADMINISTRATOR,  false,  &HandleAchievementInfoCommand,     ""},
-            { "delete",         SEC_ADMINISTRATOR,  false,  &HandleAchievementDeleteCommand,   ""}
+            { "add",            SEC_ADMINISTRATOR,  false,  &HandleAchievementAddCommand,                          ""},
+            { "criteria",       SEC_ADMINISTRATOR,  false,  &HandleAchievementCriteriaCommand,                     ""},
+            { "info",           SEC_ADMINISTRATOR,  false,  &HandleAchievementInfoCommand,                         ""},
+            { "delete",         SEC_ADMINISTRATOR,  false,  &HandleAchievementDeleteCommand,                       ""}
         };
         static std::vector<ChatCommand> commandTable =
         {
-            { "achievement",    SEC_ADMINISTRATOR,  false, NULL,            "", achievementCommandTable }
+            { "achievement",    SEC_ADMINISTRATOR,  false, NULL,                         "", achievementCommandTable }
         };
         return commandTable;
     }

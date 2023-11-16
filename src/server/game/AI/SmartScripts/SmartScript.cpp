@@ -895,6 +895,14 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
             if (!me)
                 break;
 
+            // Reset home position to respawn position if specified in the parameters
+            if (e.action.evade.toRespawnPosition == 0)
+            {
+                float homeX, homeY, homeZ, homeO;
+                me->GetRespawnPosition(homeX, homeY, homeZ, &homeO);
+                me->SetHomePosition(homeX, homeY, homeZ, homeO);
+            }
+
             me->AI()->EnterEvadeMode();
             TC_LOG_DEBUG(LOG_FILTER_DATABASE_AI, "SmartScript::ProcessAction:: SMART_ACTION_EVADE: Creature %u EnterEvadeMode", me->GetGUIDLow());
             return;
@@ -2520,8 +2528,7 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
 
             for (ObjectList::const_iterator itr = targets->begin(); itr != targets->end(); ++itr)
             {
-                Position pos;
-                pos = e.action.sumCreaturePV.summmonInNPCPosition ? me->GetPosition() : e.target.x, e.target.y, e.target.z, e.target.o;
+				Position pos = (*itr)->GetPositionWithOffset(Position(e.target.x, e.target.y, e.target.z, e.target.o));
                 if (Player* player = (*itr)->ToPlayer())
                 {
                     if (Creature* summon = player->SummonCreature(e.action.sumCreaturePV.creature, pos, static_cast<TempSummonType>(e.action.sumCreaturePV.type), e.action.sumCreaturePV.duration))
@@ -4204,6 +4211,9 @@ SmartScriptHolder SmartScript::FindLinkedEvent(uint32 link)
 void SmartScript::OnUpdate(uint32 const diff)
 {
     if ((mScriptType == SMART_SCRIPT_TYPE_CREATURE || mScriptType == SMART_SCRIPT_TYPE_GAMEOBJECT) && !GetBaseObject())
+        return;
+
+    if (me && me->IsInEvadeMode())
         return;
 
     InstallEvents();//before UpdateTimers

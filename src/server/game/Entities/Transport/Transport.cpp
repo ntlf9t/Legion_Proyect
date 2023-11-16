@@ -166,8 +166,8 @@ void Transport::Update(uint32 diff)
 
             if (timer < _currentFrame->DepartureTime)
             {
+				justStopped = IsMoving();
                 SetMoving(false);
-                justStopped = true;
                 if (_pendingStop && GetGoState() != GO_STATE_READY)
                 {
                     SetGoState(GO_STATE_READY);
@@ -503,6 +503,7 @@ void Transport::UpdatePosition(float x, float y, float z, float o)
     if (x != GetPositionX() || y != GetPositionY() || z != GetPositionZ()) // Stop update if transport stop
     {
         Relocate(x, y, z, o);
+		m_stationaryPosition.SetOrientation(o);
         UpdateModelPosition(oldCell.DiffGrid(Cell(GetPositionX(), GetPositionY())));
     }
 
@@ -653,6 +654,8 @@ bool Transport::TeleportTransport(uint32 newMapid, float x, float y, float z, fl
     }
     else
     {
+		UpdatePosition(x, y, z, o);
+
         // Teleport players, they need to know it
         for (WorldObjectSet::iterator itr = _passengers.begin(); itr != _passengers.end(); ++itr)
         {
@@ -671,7 +674,6 @@ bool Transport::TeleportTransport(uint32 newMapid, float x, float y, float z, fl
             }
         }
 
-        UpdatePosition(x, y, z, o);
         return false;
     }
 }

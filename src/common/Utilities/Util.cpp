@@ -218,7 +218,7 @@ bool IsIPAddress(char const* ipaddress)
         return false;
 
     boost::system::error_code error;
-    boost::asio::ip::address::from_string(ipaddress, error);
+    boost::asio::ip::make_address(ipaddress, error);
     return !error;
 }
 

@@ -29,7 +29,7 @@
 #include <zlib.h>
 #include <memory>
 
-#pragma pack(push, 1)
+//#pragma pack(push, 1)
 
 void Battlenet::Session::AccountInfo::LoadResult(PreparedQueryResult result)
 {
@@ -154,14 +154,14 @@ void Battlenet::Session::SendResponse(uint32 token, pb::Message const* response)
     uint16 headerSize = header.ByteSize();
     EndianConvertReverse(headerSize);
 
-    MessageBuffer packet;
+    MessageBuffer packet(sizeof(headerSize) + header.GetCachedSize() + response->GetCachedSize());
     packet.Write(&headerSize, sizeof(headerSize));
     uint8* ptr = packet.GetWritePointer();
-    packet.WriteCompleted(header.ByteSize());
-    header.SerializeToArray(ptr, header.ByteSize());
+    packet.WriteCompleted(header.GetCachedSize());
+    header.SerializePartialToArray(ptr, header.GetCachedSize());
     ptr = packet.GetWritePointer();
-    packet.WriteCompleted(response->ByteSize());
-    response->SerializeToArray(ptr, response->ByteSize());
+    packet.WriteCompleted(response->GetCachedSize());
+    response->SerializeToArray(ptr, response->GetCachedSize());
 
     AsyncWrite(&packet);
 }
@@ -176,11 +176,11 @@ void Battlenet::Session::SendResponse(uint32 token, uint32 status)
     uint16 headerSize = header.ByteSize();
     EndianConvertReverse(headerSize);
 
-    MessageBuffer packet;
+    MessageBuffer packet(sizeof(headerSize) + header.GetCachedSize());
     packet.Write(&headerSize, sizeof(headerSize));
     uint8* ptr = packet.GetWritePointer();
-    packet.WriteCompleted(header.ByteSize());
-    header.SerializeToArray(ptr, header.ByteSize());
+    packet.WriteCompleted(header.GetCachedSize());
+    header.SerializeToArray(ptr, header.GetCachedSize());
 
     AsyncWrite(&packet);
 }
@@ -197,14 +197,14 @@ void Battlenet::Session::SendRequest(uint32 serviceHash, uint32 methodId, pb::Me
     uint16 headerSize = header.ByteSize();
     EndianConvertReverse(headerSize);
 
-    MessageBuffer packet;
+    MessageBuffer packet(sizeof(headerSize) + header.GetCachedSize() + request->GetCachedSize());
     packet.Write(&headerSize, sizeof(headerSize));
     uint8* ptr = packet.GetWritePointer();
-    packet.WriteCompleted(header.ByteSize());
-    header.SerializeToArray(ptr, header.ByteSize());
+    packet.WriteCompleted(header.GetCachedSize());
+    header.SerializeToArray(ptr, header.GetCachedSize());
     ptr = packet.GetWritePointer();
-    packet.WriteCompleted(request->ByteSize());
-    request->SerializeToArray(ptr, request->ByteSize());
+    packet.WriteCompleted(request->GetCachedSize());
+    request->SerializeToArray(ptr, request->GetCachedSize());
 
     AsyncWrite(&packet);
 }

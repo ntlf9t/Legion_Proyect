@@ -174,30 +174,30 @@ class InstanceScript : public ZoneScript
         virtual WorldLocation* GetClosestGraveYard(float /*x*/, float /*y*/, float /*z*/) { return nullptr; }
 
         virtual void onScenarionNextStep(uint32 /*newStep*/) {}
-        virtual void CreatureDies(Creature* /*creature*/, Unit* /*killer*/) {}
-        virtual void OnCreatureCreate(Creature* creature);
-        virtual void OnCreatureRemove(Creature* creature);
+        virtual void CreatureDies(Creature* /*creature*/, Unit* /*killer*/) override{}
+        virtual void OnCreatureCreate(Creature* creature) override;
+        virtual void OnCreatureRemove(Creature* creature) override;
 
-        virtual void OnGameObjectCreate(GameObject* go);
-        virtual void OnGameObjectRemove(GameObject* go);
+        virtual void OnGameObjectCreate(GameObject* go) override;
+        virtual void OnGameObjectRemove(GameObject* go) override;
         virtual void OnLootChestOpen(Player* player, Loot* loot, const GameObject* go) {};
 
         // For use in InstanceScript
         virtual void OnPlayerEnterForScript(Player* player);
         virtual void OnPlayerLeaveForScript(Player* player);
         virtual void OnPlayerDiesForScript(Player* player);
-        virtual void OnCreatureCreateForScript(Creature* creature);
-        virtual void OnCreatureRemoveForScript(Creature* creature);
-        virtual void OnCreatureUpdateDifficulty(Creature* creature);
-        virtual void EnterCombatForScript(Creature* creature, Unit* enemy);
-        virtual void CreatureDiesForScript(Creature* creature, Unit* killer);
-        virtual void OnGameObjectCreateForScript(GameObject* go);
-        virtual void OnGameObjectRemoveForScript(GameObject* go);
+        virtual void OnCreatureCreateForScript(Creature* creature) override;
+        virtual void OnCreatureRemoveForScript(Creature* creature) override;
+        virtual void OnCreatureUpdateDifficulty(Creature* creature) override;
+        virtual void EnterCombatForScript(Creature* creature, Unit* enemy) override;
+        virtual void CreatureDiesForScript(Creature* creature, Unit* killer) override;
+        virtual void OnGameObjectCreateForScript(GameObject* go) override;
+        virtual void OnGameObjectRemoveForScript(GameObject* go) override;
         void StartEncounterLogging(uint32 encounterId);
         void LogCompletedEncounter(bool success);
 
-        virtual void OnUnitCharmed(Unit* unit, Unit* charmer);
-        virtual void OnUnitRemoveCharmed(Unit* unit, Unit* charmer);
+        virtual void OnUnitCharmed(Unit* unit, Unit* charmer) override;
+        virtual void OnUnitRemoveCharmed(Unit* unit, Unit* charmer) override;
 
         //Handle open / close objects
         void HandleGameObject(ObjectGuid guid, bool open, GameObject* go = nullptr);

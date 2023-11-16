@@ -605,8 +605,7 @@ void QuestDataStoreMgr::LoadQuests()
                 obj.Flags2 = fields[7].GetUInt32();
                 obj.TaskStep = fields[8].GetFloat();
                 obj.Description = fields[9].GetString();
-                obj.Bugged = fields[10].GetBool();
-
+				obj.Bugged = fields[10].GetBool();
                 _questObjectiveByType[QuestObjectiveType(obj.Type)].push_back(obj);
             }
             else

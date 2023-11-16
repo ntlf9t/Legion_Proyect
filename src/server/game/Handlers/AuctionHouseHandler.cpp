@@ -226,7 +226,7 @@ void WorldSession::HandleAuctionSellItem(WorldPackets::AuctionHouse::AuctionSell
         AH->Id = sObjectMgr->GenerateAuctionID();
 
         if (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_AUCTION))
-            AH->auctioneer = 35606;
+            AH->auctioneer = UI64LIT(23442);
         else
             AH->auctioneer = packet.Auctioneer.GetEntry();
 
@@ -239,16 +239,18 @@ void WorldSession::HandleAuctionSellItem(WorldPackets::AuctionHouse::AuctionSell
                     GetPlayerName().c_str(), GetAccountId(), item->GetTemplate()->GetName()->Str[_player->GetSession()->GetSessionDbLocaleIndex()], item->GetEntry(), item->GetCount());
             }
 
+            AH->Id = sObjectMgr->GenerateAuctionID();
             AH->itemGUIDLow = item->GetGUIDLow();
             AH->itemEntry = item->GetEntry();
             AH->itemCount = item->GetCount();
             AH->owner = _player->GetGUIDLow();
             AH->startbid = packet.MinBid;
-            AH->bidder = 0;
+            AH->bidder = UI64LIT(0);
             AH->bid = 0;
             AH->buyout = packet.BuyoutPrice;
             AH->expire_time = time(nullptr) + auctionTime;
             AH->deposit = deposit;
+			AH->etime = packet.RunTime;
             AH->auctionHouseEntry = auctionHouseEntry;
 
             sAuctionMgr->AddAItem(item);
@@ -259,6 +261,7 @@ void WorldSession::HandleAuctionSellItem(WorldPackets::AuctionHouse::AuctionSell
             SQLTransaction trans = CharacterDatabase.BeginTransaction();
             item->DeleteFromInventoryDB(trans);
             item->SaveToDB(trans);
+
             AH->SaveToDB(trans);
             _player->SaveInventoryAndGoldToDB(trans);
             CharacterDatabase.CommitTransaction(trans);
@@ -268,72 +271,78 @@ void WorldSession::HandleAuctionSellItem(WorldPackets::AuctionHouse::AuctionSell
             GetPlayer()->UpdateAchievementCriteria(CRITERIA_TYPE_CREATE_AUCTION, 1);
             return;
         }
-            // Required stack size of auction does not match to current item stack size, clone item and set correct stack size
-        Item* newItem = item->CloneItem(finalCount, _player);
-        if (!newItem)
+		 else // Required stack size of auction does not match to current item stack size, clone item and set correct stack size
         {
-            SendAuctionCommandResult(nullptr, AUCTION_SELL_ITEM, ERR_AUCTION_DATABASE_ERROR);
+            Item* newItem = item->CloneItem(finalCount, _player);
+            if (!newItem)
+            {
+                SendAuctionCommandResult(nullptr, AUCTION_SELL_ITEM, ERR_AUCTION_DATABASE_ERROR);
+                delete AH;
+                return;
+            }
+
+            if (GetSecurity() > SEC_PLAYER && sWorld->getBoolConfig(CONFIG_GM_LOG_TRADE))
+            {
+                sLog->outCommand(GetAccountId(), "GM %s (Account: %u) create auction: %s (Entry: %u Count: %u)",
+                GetPlayerName().c_str(), GetAccountId(), newItem->GetTemplate()->GetName()->Str[_player->GetSession()->GetSessionDbLocaleIndex()], newItem->GetEntry(), newItem->GetCount());
+            }
+
+            AH->itemGUIDLow = newItem->GetGUIDLow();
+            AH->itemEntry = newItem->GetEntry();
+            AH->itemCount = newItem->GetCount();
+            AH->owner = _player->GetGUIDLow();
+            AH->startbid = packet.MinBid;
+            AH->bidder = UI64LIT(0);
+            AH->bid = 0;
+            AH->buyout = packet.BuyoutPrice;
+            AH->expire_time = time(nullptr) + auctionTime;
+            AH->deposit = deposit;
+	    	AH->etime = packet.RunTime;
+            AH->auctionHouseEntry = auctionHouseEntry;
+
+            sAuctionMgr->AddAItem(newItem);
+            auctionHouse->AddAuction(AH);
+
+            for (auto const& v : packet.Items)
+            {
+                Item* item2 = _player->GetItemByGuid(v.Guid);
+
+                // Item stack count equals required count, ready to delete item - cloned item will be used for auction
+                if (item2->GetCount() == v.UseCount)
+                {
+                    _player->MoveItemFromInventory(item2, true);
+					
+					SQLTransaction trans = CharacterDatabase.BeginTransaction();
+                    item2->DeleteFromInventoryDB(trans);
+                    item2->DeleteFromDB(trans);
+					CharacterDatabase.CommitTransaction(trans);
+                    delete item2;
+                }
+                else // Item stack count is bigger than required count, update item stack count and save to database - cloned item will be used for auction
+                {
+                    item2->SetCount(item2->GetCount() - v.UseCount);
+                    item2->SetState(ITEM_CHANGED, _player);
+                    _player->ItemRemovedQuestCheck(item2->GetEntry(), v.UseCount);
+                    item2->SendUpdateToPlayer(_player);
+					
+					SQLTransaction trans = CharacterDatabase.BeginTransaction();
+                    item2->SaveToDB(trans);
+					CharacterDatabase.CommitTransaction(trans);
+                }
+            }
+
+            SQLTransaction trans = CharacterDatabase.BeginTransaction();
+            newItem->SaveToDB(trans);
+            AH->SaveToDB(trans);
+            _player->SaveInventoryAndGoldToDB(trans);
+            CharacterDatabase.CommitTransaction(trans);
+
+            SendAuctionCommandResult(AH, AUCTION_SELL_ITEM, ERR_AUCTION_OK);
+
+            GetPlayer()->UpdateAchievementCriteria(CRITERIA_TYPE_CREATE_AUCTION, 1);
             return;
         }
-
-        //if (newItem->GetEntry() == 38186)
-        //    TC_LOG_DEBUG(LOG_FILTER_EFIR, "HandleAuctionSellItem - CloneItem of item %u; finalCount = %u playerGUID %u, itemGUID %u", newItem->GetEntry(), finalCount, _player->GetGUID().GetCounter(), newItem->GetGUID().GetCounter());
-
-        if (GetSecurity() > SEC_PLAYER && sWorld->getBoolConfig(CONFIG_GM_LOG_TRADE))
-        {
-            sLog->outCommand(GetAccountId(), "GM %s (Account: %u) create auction: %s (Entry: %u Count: %u)",
-            GetPlayerName().c_str(), GetAccountId(), newItem->GetTemplate()->GetName()->Str[_player->GetSession()->GetSessionDbLocaleIndex()], newItem->GetEntry(), newItem->GetCount());
-        }
-
-        AH->itemGUIDLow = newItem->GetGUIDLow();
-        AH->itemEntry = newItem->GetEntry();
-        AH->itemCount = newItem->GetCount();
-        AH->owner = _player->GetGUIDLow();
-        AH->startbid = packet.MinBid;
-        AH->bidder = 0;
-        AH->bid = 0;
-        AH->buyout = packet.BuyoutPrice;
-        AH->expire_time = time(nullptr) + auctionTime;
-        AH->deposit = deposit;
-        AH->auctionHouseEntry = auctionHouseEntry;
-
-        sAuctionMgr->AddAItem(newItem);
-        auctionHouse->AddAuction(AH);
-
-        SQLTransaction trans = CharacterDatabase.BeginTransaction();
-
-        for (auto const& v : packet.Items)
-        {
-            Item* item2 = _player->GetItemByGuid(v.Guid);
-
-            // Item stack count equals required count, ready to delete item - cloned item will be used for auction
-            if (item2->GetCount() == v.UseCount)
-            {
-                _player->MoveItemFromInventory(item2, true);
-                item2->DeleteFromInventoryDB(trans);
-                item2->DeleteFromDB(trans);
-                delete item2;
-            }
-            else // Item stack count is bigger than required count, update item stack count and save to database - cloned item will be used for auction
-            {
-                item2->SetCount(item2->GetCount() - v.UseCount);
-                item2->SetState(ITEM_CHANGED, _player);
-                _player->ItemRemovedQuestCheck(item2->GetEntry(), v.UseCount);
-                item2->SendUpdateToPlayer(_player);
-                item2->SaveToDB(trans);
-            }
-        }
-
-        newItem->SaveToDB(trans);
-        AH->SaveToDB(trans);
-        _player->SaveInventoryAndGoldToDB(trans);
-        CharacterDatabase.CommitTransaction(trans);
-
-        SendAuctionCommandResult(AH, AUCTION_SELL_ITEM, ERR_AUCTION_OK);
-
-        GetPlayer()->UpdateAchievementCriteria(CRITERIA_TYPE_CREATE_AUCTION, 1);
-        return;
-    }
+	}
 }
 
 void WorldSession::HandleAuctionPlaceBid(WorldPackets::AuctionHouse::AuctionPlaceBid& packet)

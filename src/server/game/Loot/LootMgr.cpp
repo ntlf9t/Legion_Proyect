@@ -420,6 +420,7 @@ LootItem::LootItem(LootStoreItem const& li, Loot* loot)
     is_blocked = false;
     is_underthreshold = false;
     is_counted = false;
+	rollWinnerGUID = ObjectGuid::Empty;
 
     init(loot);
 }
@@ -785,7 +786,7 @@ bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bo
     if (go && isRareOrGo && go->InInstance())
         if (uint32 instanceId = go->GetInstanceId())
             if (Scenario* progress = sScenarioMgr->GetScenario(instanceId))
-                if (_challenge = progress->GetChallenge())
+                if ((_challenge = progress->GetChallenge()))
                     if (_challenge->_complete)
                         _itemContext = sChallengeMgr->GetLootTreeMod(_levelBonus, _challengeLevel, _challenge);
 
@@ -1488,6 +1489,13 @@ void Loot::BuildLootResponse(WorldPackets::Loot::LootResponse& packet, Player* v
                         // => item is lootable
                         slot_type = LOOT_ITEM_UI_NORMAL;
                     }
+                    else if (!items[i].rollWinnerGUID.IsEmpty())
+                    {
+                        if (items[i].rollWinnerGUID == viewer->GetGUID())
+                            slot_type = LOOT_ITEM_UI_OWNER;
+                        else
+                            continue;
+                    }
                     else
                         // item shall not be displayed.
                         continue;
@@ -1811,6 +1819,10 @@ bool Loot::AllowedForPlayer(Player const* player, uint32 ItemID, uint8 type, boo
 
         // check quest requirements
         if (!(pProto->FlagsCu & ITEM_FLAGS_CU_IGNORE_QUEST_STATUS) && ((needs_quest || (pProto->GetStartQuestID() && player->GetQuestStatus(pProto->GetStartQuestID()) != QUEST_STATUS_NONE)) && !player->HasQuestForItem(ItemID)))
+            return false;
+
+        // Don't show bind-when-picked-up unique items if player already has the maximum allowed quantity.
+        if (pProto->GetBonding() == BIND_WHEN_PICKED_UP && pProto->GetMaxCount() && int32(player->GetItemCount(ItemID, true)) >= pProto->GetMaxCount())
             return false;
 
         //! GARR_BTYPE_WARMILL support.

@@ -182,21 +182,12 @@ void WorldSession::HandleGarrisonOpenMissionNpc(WorldPackets::Garrison::Garrison
     {
     case GarrisonConst::FollowerType::Garrison:
     {
-        if (!_player->GetNPCIfCanInteractWith(packet.NpcGUID, UNIT_NPC_FLAG_NONE, UNIT_NPC_FLAG2_GARRISON_MISSION_NPC | UNIT_NPC_FLAG2_SHIPMENT_CRAFTER))
+        if (!_player->GetNPCIfCanInteractWith(packet.NpcGUID, UNIT_NPC_FLAG_NONE, UNIT_NPC_FLAG2_GARRISON_MISSION_NPC))
             return;
 
         WorldPackets::Garrison::GarrisonOpenMissionNpc response;
         response.GarrTypeID = GARRISON_TYPE_GARRISON;
-        //response.PreventXmlOpenMissionEvent = true;
-
-        if (Garrison* garrison = _player->GetGarrison())
-        {
-            for (const std::pair<uint64, Mission>& mission : garrison->GetMissions(GARRISON_TYPE_GARRISON))
-            {
-                // TODO: going from uint64 to int32 (see GarrisonPackets.cpp), will this ever be a problem?
-                response.Missions.push_back(static_cast<int32>(mission.first));
-            }
-        }
+        response.PreventXmlOpenMissionEvent = true;
         SendPacket(response.Write());
 
         if (auto garrison = _player->GetGarrison())
@@ -269,9 +260,6 @@ void WorldSession::HandleGetTrophyList(WorldPackets::Garrison::GetTrophyList& /*
 
 void WorldSession::HandleGarrisonSetFollowerInactive(WorldPackets::Garrison::GarrisonSetFollowerInactive& packet)
 {
-    if (!_player->HasEnoughMoney(int64(2500000)))
-        return;
-
     if (Garrison* garrison = _player->GetGarrison())
     {
         if (auto follower = garrison->GetFollower(packet.FollowerDBID))
@@ -295,6 +283,9 @@ void WorldSession::HandleGarrisonSetFollowerInactive(WorldPackets::Garrison::Gar
             }
             else
             {
+				if (!_player->HasEnoughMoney(int64(2500000)))
+                    return;
+
                 if (!(follower->PacketInfo.FollowerStatus & GarrisonConst::GarrisonFollowerFlags::FOLLOWER_STATUS_INACTIVE))
                     return;
 
@@ -309,9 +300,9 @@ void WorldSession::HandleGarrisonSetFollowerInactive(WorldPackets::Garrison::Gar
                 packetResult.Amount = 0;
                 packetResult.UnkInt = 0;
                 _player->SendDirectMessage(packetResult.Write());
+				_player->ModifyMoney(-int64(2500000));
             }
             follower->DbState = DB_STATE_CHANGED;
-            _player->ModifyMoney(-int64(2500000));
         }
     }
 }
@@ -321,14 +312,6 @@ void WorldSession::HandleGarrisonRemoveFollowerFromBuilding(WorldPackets::Garris
 
 void WorldSession::HandleGarrisonAssignFollowerToBuilding(WorldPackets::Garrison::GarrisonAssignFollowerToBuilding& /*packet*/)
 { }
-
-void WorldSession::HandleGarrisonRequestScoutingMap(WorldPackets::Garrison::GarrisonRequestScoutingMap& scoutingMap)
-{
-    WorldPackets::Garrison::GarrisonScoutingMapResult result;
-    result.ID = scoutingMap.ID;
-    result.Active = true;
-    SendPacket(result.Write());
-}
 
 void WorldSession::HandleGarrisonGenerateRecruits(WorldPackets::Garrison::GarrisonGenerateRecruits& /*packet*/)
 { }

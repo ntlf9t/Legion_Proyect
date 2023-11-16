@@ -195,6 +195,7 @@ void BattlegroundSeethingShore::PostUpdateImpl(uint32 diff)
     }
 
     if (GetStatus() == STATUS_IN_PROGRESS)
+	{
         for (uint8 i = 0; i < 2; ++i)
             if (m_boxesTimers[i] <= diff)
             {
@@ -209,10 +210,15 @@ void BattlegroundSeethingShore::PostUpdateImpl(uint32 diff)
                 }
 
                 if (Creature* capitan = GetBgMap()->GetCreature(m_capitans[i]))
+				{
                     capitan->AI()->DoAction(5);
+				}
             }
             else
+			{
                 m_boxesTimers[i] -= diff;
+			}
+	}
 }
 
 void BattlegroundSeethingShore::TeleportToStart(Player * player)

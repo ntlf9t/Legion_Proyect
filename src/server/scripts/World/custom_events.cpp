@@ -78,10 +78,16 @@ struct boss_temple_vonjin : public ScriptedAI
 	void Skull()
 	{
 		if (auto skull = me->FindNearestGameObject(go_hazorn_skull_1, 50.f))
+		{
 			if (me->isAlive())
+			{
 				skull->SetFlag(GAMEOBJECT_FIELD_FLAGS, GO_FLAG_NOT_SELECTABLE);
+			}
 			else
+			{
 				skull->RemoveFlag(GAMEOBJECT_FIELD_FLAGS, GO_FLAG_NOT_SELECTABLE);
+			}
+		}
 	}
 
 	void JustSummoned(Creature* summon) override
@@ -254,10 +260,16 @@ struct boss_temple_lessar : public ScriptedAI
 	void Blood()
 	{
 		if (auto blood = me->FindNearestGameObject(go_ritual_blood_1, 50.f))
+		{
 			if (me->isAlive())
+			{
 				blood->SetFlag(GAMEOBJECT_FIELD_FLAGS, GO_FLAG_NOT_SELECTABLE);
+			}
 			else
+			{
 				blood->RemoveFlag(GAMEOBJECT_FIELD_FLAGS, GO_FLAG_NOT_SELECTABLE);
+			}
+		}
 	}
 
 	void KilledUnit(Unit* who) override
@@ -1589,7 +1601,7 @@ class spell_events_spirit_chains : public AuraScript
 		if (timer <= diff)
 		{
 			if (auto target = GetCaster())
-				if (health = target->GetHealth())
+				if ((health = target->GetHealth()))
 					target->SetHealth(health - (health * 5 / 100));
 
 			timer = 1000;
@@ -2831,7 +2843,7 @@ struct boss_new_year_2019_atray : public ScriptedAI
 		me->UpdateMaxHealth();
 	}
 
-	void EnterEvadeMode()
+	void EnterEvadeMode() override
 	{
 		CreatureAI::EnterEvadeMode();
 		me->SetHomePosition(AtrayHomePos);
@@ -3239,7 +3251,7 @@ struct boss_new_year_2019_evala : public ScriptedAI
 		}
 	}
 
-	void EnterEvadeMode()
+	void EnterEvadeMode() override
 	{
 		CreatureAI::EnterEvadeMode();
 		me->SetVisible(false);
@@ -3468,7 +3480,7 @@ struct npc_new_year_2019_evala_portal : public ScriptedAI
 			clicker->RemoveAurasDueToSpell(SPELL_EVALA_PHASE);
 	}
 
-	void UpdateAI(uint32 diff)
+	void UpdateAI(uint32 diff) override
 	{
 		events.Update(diff);
 
@@ -3510,7 +3522,7 @@ struct npc_new_year_2019_void_zone : public ScriptedAI
 		events.ScheduleEvent(EVENT_1, 8000);
 	}
 
-	void UpdateAI(uint32 diff)
+	void UpdateAI(uint32 diff) override
 	{
 		events.Update(diff);
 
@@ -3541,7 +3553,7 @@ struct npc_new_year_2019_evala_arctic_cloud : public ScriptedAI
 		events.ScheduleEvent(EVENT_1, urand(1000, 2000));
 	}
 
-	void UpdateAI(uint32 diff)
+	void UpdateAI(uint32 diff) override
 	{
 		events.Update(diff);
 
@@ -3603,7 +3615,7 @@ struct npc_new_year_2019_evala_shard : public ScriptedAI
 		}
 	}
 
-	void UpdateAI(uint32 diff)
+	void UpdateAI(uint32 diff) override
 	{
 		if (!UpdateVictim())
 			return;
@@ -3649,7 +3661,7 @@ struct npc_new_year_2019_evala_frostmage : public ScriptedAI
 		me->DespawnOrUnsummon(200);
 	}
 
-	void UpdateAI(uint32 diff)
+	void UpdateAI(uint32 diff) override
 	{
 		events.Update(diff);
 
@@ -3692,7 +3704,7 @@ struct npc_new_year_2019_evala_frostwarr : public ScriptedAI
 		me->DespawnOrUnsummon(200);
 	}
 
-	void UpdateAI(uint32 diff)
+	void UpdateAI(uint32 diff) override
 	{
 		events.Update(diff);
 
@@ -3790,7 +3802,7 @@ struct npc_new_year_2019_evala_minion : public VehicleAI
 		}
 	}
 
-	void UpdateAI(uint32 diff)
+	void UpdateAI(uint32 diff) override
 	{
 		if (insert)
 			return;
@@ -3829,7 +3841,7 @@ struct npc_new_year_2019_evala_tomb : public ScriptedAI
 			owner->RemoveAurasDueToSpell(SPELL_EVALA_ICY_TOMB_STUN);
 	}
 
-	void UpdateAI(uint32 diff)
+	void UpdateAI(uint32 diff) override
 	{
 		if (timer <= diff)
 		{
@@ -3857,7 +3869,7 @@ struct npc_new_year_2019_evala_guard : public ScriptedAI
 		me->DespawnOrUnsummon(100);
 	}
 
-	void UpdateAI(uint32 diff)
+	void UpdateAI(uint32 diff) override
 	{
 		if (timer <= diff)
 		{
@@ -4482,7 +4494,7 @@ public:
 		}
 	};
 
-	CreatureAI* GetAI(Creature* creature) const
+	CreatureAI* GetAI(Creature* creature) const override
 	{
 		return new npc_events_teleporter_spAI(creature);
 	}
@@ -5308,22 +5320,6 @@ public:
 		player->TeleportTo(1220, DalaranPos.m_positionX, DalaranPos.m_positionY, DalaranPos.m_positionZ, DalaranPos.m_orientation);
 	}
 
-	void OnMapChanged(Player* player)
-	{
-		if (auto sec = player->GetSession()->GetSecurity())
-		{
-			if (sec == 1 || sec == 2)
-			{
-				if (!sWorld->getBoolConfig(CONFIG_IS_TEST_SERVER))
-				{
-					if (auto map = player->GetMap())
-						if (map->IsDungeon() || map->IsRaid() || map->isChallenge() || map->IsBattlegroundOrArena())
-							player->TeleportTo(1, 16222.12f, 16258.40f, 13.19f, 1.48f);
-				}
-			}
-		}
-	}
-
 	void OnUpdate(Player* player, uint32 diff) override
 	{
 		if (player->isGameMaster())
@@ -5448,7 +5444,7 @@ public:
 		}
 	}
 
-	void OnEnterCombat(Player* player, Unit* /*target*/)
+	void OnEnterCombat(Player* player, Unit* /*target*/) override
 	{
 		if (player->GetCurrentZoneID() == 65 && sGameEventMgr->IsActiveEvent(823))
 		{
@@ -5457,7 +5453,7 @@ public:
 		}
 	}
 
-	void OnQuestReward(Player* player, Quest const* quest)
+	void OnQuestReward(Player* player, Quest const* quest) override
 	{
 		switch (quest->Id)
 		{
@@ -5479,7 +5475,7 @@ public:
 		}
 	}
 
-	void OnSpellLearned(Player* player, uint32 spellID)
+	void OnSpellLearned(Player* player, uint32 spellID) override
 	{
 		switch (spellID)
 		{

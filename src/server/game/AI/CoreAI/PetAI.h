@@ -39,7 +39,10 @@ public:
     static int Permissible(const Creature*);
 
     void KilledUnit(Unit* /*victim*/) override;
+    // only start attacking if not attacking something else already
     void AttackStart(Unit* target) override;
+    // always start attacking if possible
+    void _AttackStart(Unit* target);
     void MovementInform(uint32 moveType, uint32 data) override;
     void OwnerDamagedBy(Unit* attacker) override;
     void OwnerAttacked(Unit* target) override;

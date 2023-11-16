@@ -50,7 +50,7 @@ enum Gossip_Option
     GOSSIP_OPTION_MAILBOX               = 18,                   //UNIT_NPC_FLAG_MAILBOX
     GOSSIP_OPTION_OUTDOORPVP            = 19,                   //added by code (option for outdoor pvp creatures)
     GOSSIP_OPTION_TRANSMOGRIFIER        = 20,                   //UNIT_NPC_FLAG_TRANSMOGRIFIER
-    GOSSIP_OPTION_SCENARIO              = 21,                   //UNIT_NPC_FLAG_GOSSIP
+    GOSSIP_OPTION_ADVENTURE_MAP         = 21,
     GOSSIP_OPTION_GARRISON_SHIPMENT     = 22,                   //UNIT_NPC_FLAG2_AI_OBSTACLE 
     GOSSIP_OPTION_GARRISON_TRADESKILL   = 23,                   //UNIT_NPC_FLAG2_TRADESKILL_NPC
     GOSSIP_OPTION_SHIPMENT_CRAFTER      = 24,                   //UNIT_NPC_FLAG2_SHIPMENT_CRAFTER
@@ -58,6 +58,7 @@ enum Gossip_Option
     GOSSIP_OPTION_CHOICE                = 26,                   //UNIT_NPC_FLAG_GOSSIP
     GOSSIP_OPTION_ARTIFACT_RESPEC       = 27,                   //UNIT_NPC_FLAG_ARTIFACT_POWER_RESPEC
     GOSSIP_OPTION_ALLIED_RACE_DETAILS   = 28,                   // SMSG_OPEN_ALLIED_RACE_DETAILS
+	GOSSIP_OPTION_SCENARIO              = 29,                   //UNIT_NPC_FLAG_GOSSIP
     GOSSIP_OPTION_MAX
 };
 
@@ -84,6 +85,13 @@ enum GossipOptionIcon
     GOSSIP_ICON_CHAT_18             = 18,                   // white chat bubble
     GOSSIP_ICON_CHAT_19             = 19,                   // white chat bubble
     GOSSIP_ICON_CHAT_20             = 20,                   // white chat bubble
+    GOSSIP_ICON_CHAT_21             = 21,                   // transmogrifier?
+    GOSSIP_ICON_CHAT_22             = 22,
+    GOSSIP_ICON_CHAT_23             = 23,
+    GOSSIP_ICON_CHAT_24             = 24,
+    GOSSIP_ICON_CHAT_25             = 25,
+    GOSSIP_ICON_CHAT_26             = 26,
+    GOSSIP_ICON_CHAT_27             = 27,
     GOSSIP_ICON_SHIPMENT            = 28,                   // auto-click?
     GOSSIP_ICON_TRADESKILL          = 29,                   
     GOSSIP_ICON_ADVENTURE_MAP       = 31,

@@ -145,6 +145,26 @@ void HostileRefManager::deleteReferencesForFaction(uint32 faction)
     }
 }
 
+//=================================================
+// delete all references out of specified range
+
+void HostileRefManager::deleteReferencesOutOfRange(float range)
+{
+    HostileReference* ref = getFirst();
+    range = range*range;
+    while (ref)
+    {
+        HostileReference* nextRef = ref->next();
+        Unit* owner = ref->getSource()->getOwner();
+        if (!owner->isActiveObject() && owner->GetExactDist2dSq(getOwner()) > range)
+        {
+            ref->removeReference();
+            delete ref;
+        }
+        ref = nextRef;
+    }
+}
+
 HostileReference* HostileRefManager::getFirst()
 {
     return reinterpret_cast<HostileReference*>(RefManager<Unit, ThreatManager>::getFirst());

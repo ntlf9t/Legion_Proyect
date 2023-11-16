@@ -3570,6 +3570,9 @@ bool Spell::UpdateChanneledTargetList()
 
         if (Player* modOwner = m_caster->GetSpellModOwner())
             modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RANGE, range, this);
+
+        // add little tolerance level
+        range += std::min(MAX_SPELL_RANGE_TOLERANCE, range*0.1f); // 10% but no more than MAX_SPELL_RANGE_TOLERANCE
     }
 
     if (!range)
@@ -6111,7 +6114,7 @@ void Spell::TakeRunePower()
 
 void Spell::LinkedSpell(Unit* _caster, Unit* _target, SpellLinkedType type, uint32 effectMask)
 {
-    if (const std::vector<SpellLinked>* spell_triggered = sSpellMgr->GetSpellLinked(type, m_spellInfo->Id))
+    if (std::vector<SpellLinked> const* spell_triggered = sSpellMgr->GetSpellLinked(type, m_spellInfo->Id))
     {
         std::set<uint32> spellBanList;
         std::set<uint32> groupLock;

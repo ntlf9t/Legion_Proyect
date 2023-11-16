@@ -1593,7 +1593,7 @@ void Battleground::EventPlayerLoggedOut(Player* player)
     {
         RemovePlayer(player, guid, GetPlayerTeam(guid));
 
-        if (IsArena())
+        if (IsArena() && player->isAlive())
             if (!GetAlivePlayersCountByTeam(player->GetBGTeam()) && GetPlayersCountByTeam(GetOtherTeam(player->GetBGTeam())))
                 EndBattleground(GetOtherTeam(player->GetBGTeam()));
     }

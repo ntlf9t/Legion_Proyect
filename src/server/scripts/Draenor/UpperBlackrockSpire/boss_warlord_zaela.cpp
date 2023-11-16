@@ -411,12 +411,12 @@ struct npc_emberscale_matron : public ScriptedAI
 
     ObjectGuid zaelaGUID;
 
-    void Reset()
+    void Reset() override
     {
         zaelaGUID.Clear();
     }
 
-    void EnterCombat(Unit* /*who*/) {}
+    void EnterCombat(Unit* /*who*/) override {}
 
     void MovementInform(uint32 type, uint32 id) override
     {

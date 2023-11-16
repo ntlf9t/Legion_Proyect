@@ -56,6 +56,11 @@ bool UnitAI::DoMeleeAttackIfReady(SpellSchoolMask schoolMask)
     bool attackSuccess = false;
 
     Unit* victim = me->getVictim();
+
+    // Check that the victim is in front of the unit
+    if (!me->HasInArc(2 * float(M_PI) / 3, victim))
+        return true;
+
     //Make sure our attack is ready and we aren't currently casting before checking distance
     if (me->isAttackReady() && me->IsWithinMeleeRange(victim))
     {
@@ -103,8 +108,6 @@ bool UnitAI::DoSpellAttackIfReady(uint32 spell, TriggerCastFlags triggerFlags /*
 
 Unit* UnitAI::SelectTarget(SelectAggroTarget targetType, uint32 position, float dist, bool playerOnly, int32 aura)
 {
-    if (!this)
-        return nullptr;
     return SelectTarget(targetType, position, DefaultTargetSelector(me, dist, playerOnly, aura));
 }
 

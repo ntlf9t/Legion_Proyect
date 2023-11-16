@@ -45,7 +45,7 @@ enum Spells
     SPELL_DEATH_BLOSSOM     = 114241,
     //Dogs
     SPELL_HUNGRY_DOG        = 111578,
-    SPELL_DOG_CLEAVE        = 116222,
+    //SPELL_DOG_CLEAVE        = 116222,
 };
 
 enum Achieve
@@ -364,7 +364,7 @@ public:
                         DoCast((SelectTarget(SELECT_TARGET_RANDOM, 0, 50, true)), SPELL_HUNGRY_DOG, true);
                         break;
                     case EVENT_DOGS_RAGE:
-                        DoCast(SPELL_DOG_CLEAVE);
+                        //DoCast(SPELL_DOG_CLEAVE);
                         me->GetMotionMaster()->MovePoint(1, dogsPoint[0]);
                         me->SetReactState(REACT_AGGRESSIVE);
                         me->DespawnOrUnsummon(20000);

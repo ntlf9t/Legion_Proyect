@@ -359,7 +359,11 @@ public:
                             Talk(talk, owner->GetGUID());
                         talk++;
                         timer = 16000;
-                    } else timer -= diff;
+                    } 
+					else
+					{
+						timer -= diff;
+					}
         }
         
     };

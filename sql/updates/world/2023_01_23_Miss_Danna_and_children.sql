@@ -485,3 +485,6 @@ INSERT INTO `smart_scripts` (`entryorguid`, `source_type`, `id`, `link`, `event_
 (3512, 0, 125, 0, 61, 0, 100, 0, 0, 0, 0, 0, 5, 274, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 'Link - \'No\' Emote'),
 (3512, 0, 126, 127, 22, 0, 30, 0, 68, 2000, 2000, 0, 11, 58514, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 'Receive Nosepick Emote - Chance to Cast Rotten Banana on invoker'),
 (3512, 0, 127, 0, 61, 0, 100, 0, 0, 0, 0, 0, 5, 274, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 'Link - \'No\' Emote');
+
+
+UPDATE `world`.`creature_equip_template` SET `ItemID1`=0 WHERE  `CreatureID`=3513 AND `ID`=1;

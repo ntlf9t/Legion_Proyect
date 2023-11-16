@@ -449,22 +449,26 @@ public:
 
             if (unit->ToCreature() && unit->ToCreature()->GetEntry() == CREATURE_YU_LON)
             {
-                if (auto creature = instance->GetCreature(liuGuid))
-                {
+                Creature* creature = instance->GetCreature(liuGuid);
+                if (!creature)
+                    return;
+                
                     creature->RemoveAura(SPELL_JADE_ESSENCE);
-                    creature->CastSpell(creature, SPELL_TRANSFORM_VISUAL, false);
+                    //creature->CastSpell(creature, SPELL_TRANSFORM_VISUAL, false);
                     creature->RemoveAura(SPELL_POSSESSED_BY_SHA);
                     creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
 
-                    if (auto liu = instance->GetCreature(liuGuid))
-                        liu->Kill(liu, true);
+                if (creature->GetAI())
+                    creature->GetAI()->DoAction(0);
 
-                    if (auto Gutoogo = instance->GetGameObject(doorLiu))
-                        Gutoogo->SetGoState(GO_STATE_ACTIVE);
+                //Open the door!
+                GameObject* go = instance->GetGameObject(doorLiu);
+                if (go != nullptr)
+                    go->SetGoState(GO_STATE_ACTIVE);
+                go = instance->GetGameObject(doorLiu_2);
+                if (go != nullptr)
+                    go->SetGoState(GO_STATE_ACTIVE);
 
-                    if (auto go2 = instance->GetGameObject(doorLiu_2))
-                        go2->SetGoState(GO_STATE_ACTIVE);
-                }
             }
         }
 

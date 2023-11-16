@@ -1,47 +1,40 @@
+# This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
+#
+# This file is free software; as a special exception the author gives
+# unlimited permission to copy and/or distribute it, with or without
+# modifications, as long as this notice is preserved.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 if(WIN32)
- set(BOOST_DEBUG ON)
-  if(DEFINED ENV{BOOST_ROOT})
-    set(BOOST_ROOT $ENV{BOOST_ROOT})
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0)
-      set(BOOST_LIBRARYDIR ${BOOST_ROOT}/lib${PLATFORM}-msvc-12.0)
-    elseif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.10)
-      set(BOOST_LIBRARYDIR ${BOOST_ROOT}/lib${PLATFORM}-msvc-14.0)
-    else()
-      list(APPEND BOOST_LIBRARYDIR
-        ${BOOST_ROOT}/lib${PLATFORM}-msvc-14.1
-        ${BOOST_ROOT}/lib${PLATFORM}-msvc-14.0)
+ set(ENV{BOOST_ROOT} "${PROJECT_SOURCE_DIR}/../Requirements/Win64/Boost_1.64_Win64")
+  set(BOOST_DEBUG ON)
+    if(DEFINED ENV{BOOST_ROOT})
+      set(BOOST_ROOT $ENV{BOOST_ROOT})
     endif()
-  else()
-    message(FATAL_ERROR "No BOOST_ROOT environment variable could be found! Please make sure it is set and the points to your Boost installation.")
-  endif()
-
+  
   set(Boost_USE_STATIC_LIBS        ON)
   set(Boost_USE_MULTITHREADED      ON)
   set(Boost_USE_STATIC_RUNTIME     OFF)
 endif()
 
-find_package(Boost 1.51 REQUIRED system filesystem thread program_options iostreams regex)
-
-# Find if Boost was compiled in C++03 mode because it requires -DBOOST_NO_CXX11_SCOPED_ENUMS
-
 include (CheckCXXSourceCompiles)
 
-set(CMAKE_REQUIRED_INCLUDES ${Boost_INCLUDE_DIR})
-set(CMAKE_REQUIRED_LIBRARIES ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_IOSTREAMS_LIBRARY})
-set(CMAKE_REQUIRED_FLAGS "-std=c++11")
-unset(boost_filesystem_copy_links_without_NO_SCOPED_ENUM CACHE)
-check_cxx_source_compiles("
-  #include <boost/filesystem/path.hpp>
-  #include <boost/filesystem/operations.hpp>
-  int main() { boost::filesystem::copy_file(boost::filesystem::path(), boost::filesystem::path()); }"
-boost_filesystem_copy_links_without_NO_SCOPED_ENUM)
-unset(CMAKE_REQUIRED_INCLUDES CACHE)
-unset(CMAKE_REQUIRED_LIBRARIES CACHE)
-unset(CMAKE_REQUIRED_FLAGS CACHE)
+if (WIN32)
+  # On windows the requirements are higher according to the wiki.
+  set(BOOST_REQUIRED_VERSION 1.82.0)
+else()
+  set(BOOST_REQUIRED_VERSION 1.71)
+endif()
+#system filesystem thread program_options iostreams regex
+find_package(Boost ${BOOST_REQUIRED_VERSION} REQUIRED system thread filesystem program_options iostreams regex)
 
-if (NOT boost_filesystem_copy_links_without_NO_SCOPED_ENUM)
-  set(OPTIONAL_BOOST_NO_SCOPED_ENUMS -DBOOST_NO_CXX11_SCOPED_ENUMS)
+if(NOT Boost_FOUND)
+  if(NOT DEFINED ENV{BOOST_ROOT} AND NOT DEFINED Boost_DIR AND NOT DEFINED BOOST_ROOT AND NOT DEFINED BOOSTROOT)
+    message(FATAL_ERROR "No BOOST_ROOT environment variable could be found! Please make sure it is set and the points to your Boost installation.")
+  endif()
 endif()
 
 add_library(boost INTERFACE)
@@ -56,7 +49,52 @@ target_include_directories(boost
 
 target_compile_definitions(boost
   INTERFACE
-    -DBOOST_DATE_TIME_NO_LIB
-    -DBOOST_REGEX_NO_LIB
-    -DBOOST_CHRONO_NO_LIB
-    ${OPTIONAL_BOOST_NO_SCOPED_ENUMS})
+    -DBOOST_ALL_NO_LIB
+    -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE
+    -DBOOST_ASIO_NO_DEPRECATED
+    -DBOOST_BIND_NO_PLACEHOLDERS
+    -DBOOST_SYSTEM_USE_UTF8)
+
+if (WITH_BOOST_STACKTRACE AND NOT WIN32)
+  message("*** libbacktrace will be linked")
+
+  if (BOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE)
+    CHECK_INCLUDE_FILE(${BOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE} HAS_BACKTRACE)
+  else()
+    CHECK_INCLUDE_FILE("backtrace.h" HAS_BACKTRACE)
+  endif()
+
+  if (NOT HAS_BACKTRACE)
+    message(FATAL_ERROR "Required header 'backtrace.h' not found. If building with a compiler other than GCC, please specify the full path in the CMake option BOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE.")
+  endif()
+
+  target_compile_definitions(boost
+    INTERFACE
+      -DBOOST_STACKTRACE_USE_BACKTRACE)
+
+  target_link_libraries(boost
+    INTERFACE
+      backtrace)
+endif()
+
+if (WITH_BOOST_STACKTRACE AND NOT WIN32)
+  message("*** libbacktrace will be linked")
+
+  if (BOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE)
+    CHECK_INCLUDE_FILE(${BOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE} HAS_BACKTRACE)
+  else()
+    CHECK_INCLUDE_FILE("backtrace.h" HAS_BACKTRACE)
+  endif()
+
+  if (NOT HAS_BACKTRACE)
+    message(FATAL_ERROR "Required header 'backtrace.h' not found. If building with a compiler other than GCC, please specify the full path in the CMake option BOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE.")
+  endif()
+
+  target_compile_definitions(boost
+    INTERFACE
+      -DBOOST_STACKTRACE_USE_BACKTRACE)
+
+  target_link_libraries(boost
+    INTERFACE
+      backtrace)
+endif()

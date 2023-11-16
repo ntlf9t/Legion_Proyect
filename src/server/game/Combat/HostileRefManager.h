@@ -46,6 +46,9 @@ public:
 
     void deleteReferencesForFaction(uint32 faction);
 
+    // for combat bugs
+    void deleteReferencesOutOfRange(float range);
+
     HostileReference* getFirst();
 
     void updateThreatTables();

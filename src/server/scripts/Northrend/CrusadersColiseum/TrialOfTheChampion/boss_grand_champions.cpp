@@ -951,7 +951,11 @@ public:
                     {
                         DoCast(target, SPELL_MULTI_SHOT);
                         multiShotTimer = 6000;
-                    } else multiShotTimer = 1000;
+                    } 
+					else
+					{
+						multiShotTimer = 1000;
+					}
             } else multiShotTimer -= diff;
 
             // Shoot instead of meele swing

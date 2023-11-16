@@ -558,6 +558,13 @@ bool Position::IsPositionValid() const
     return Trinity::IsValidMapCoord(m_positionX, m_positionY, m_positionZ, m_orientation);
 }
 
+Position Position::GetPositionWithOffset(Position const& offset) const
+{
+    Position ret(*this);
+    ret.RelocateOffset(offset);
+    return ret;
+}
+
 float Position::GetExactDist2dSq(float x, float y) const
 {
     float dx = m_positionX - x;

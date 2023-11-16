@@ -198,6 +198,7 @@ public:
                 return;
 
             if (!jump)
+			{
                 if (outrotimer <= diff)
                 {
                     Map::PlayerList const &PlList = instance->GetPlayers();
@@ -214,7 +215,10 @@ public:
                     jump = true;
                 }
                 else
+				{
                     outrotimer -= diff;
+				}
+			}
         }
     };
 };

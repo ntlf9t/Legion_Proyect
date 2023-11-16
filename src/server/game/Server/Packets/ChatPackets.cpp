@@ -22,7 +22,7 @@
 #include "Creature.h"
 #include "Channel.h"
 #include "CreatureTextMgr.h"
-
+#include  <cwctype>
 void WorldPackets::Chat::ChatMessage::Read()
 {
     _worldPacket >> Language;

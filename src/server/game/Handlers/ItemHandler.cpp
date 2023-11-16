@@ -1569,4 +1569,3 @@ void WorldSession::HandleSortReagentBankBags(WorldPackets::Item::SortReagentBank
     SortBags(_player, &Player::ApplyOnReagentBankItems);
     SendPacket(WorldPackets::Item::SortBagsResult().Write());
 }
-

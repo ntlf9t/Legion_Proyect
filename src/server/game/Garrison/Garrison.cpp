@@ -256,7 +256,9 @@ bool Garrison::LoadFromDB(PreparedQueryResult const& garrison, PreparedQueryResu
 
             plot->db_state_building = DB_STATE_UNCHANGED;
 
-            if (plot->BuildingInfo.PacketInfo->Active)
+            if (!plot->BuildingInfo.PacketInfo->Active)
+                plot->buildingActivationWaiting = true;
+            else
             {
                 // only garrison.
                 if (!_siteLevel[GARRISON_TYPE_GARRISON])
@@ -522,22 +524,24 @@ void Garrison::SaveToDB(SQLTransaction const& trans)
     for (auto &p : _plots)
     {
         Plot &plot = p.second;
+
+        // if we have DB_STATE_REMOVED we already have reset the BuildingInfo for this plot
+        if (plot.db_state_building == DB_STATE_REMOVED)
+        {
+            plot.db_state_building = DB_STATE_UNCHANGED;
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHARACTER_GARRISON_BUILDINGS_BY_PLOT);
+            stmt->setUInt64(0, _owner->GetGUIDLow());
+            stmt->setUInt32(1, plot.BuildingInfo.PacketInfo->GarrPlotInstanceID);
+            trans->Append(stmt);
+            continue;
+        }
+
         if (plot.BuildingInfo.PacketInfo)
         {
             auto buildingEntry = sGarrBuildingStore.LookupEntry(plot.BuildingInfo.PacketInfo->GarrBuildingID);
             if (!buildingEntry)
                 continue;
-
-            if (plot.db_state_building == DB_STATE_REMOVED)
-            {
-                plot.db_state_building = DB_STATE_UNCHANGED;
-
-                stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHARACTER_GARRISON_BUILDINGS_BY_PLOT);
-                stmt->setUInt64(0, _owner->GetGUIDLow());
-                stmt->setUInt32(1, plot.BuildingInfo.PacketInfo->GarrPlotInstanceID);
-                trans->Append(stmt);
-                continue;
-            }
 
             if (plot.db_state_building != DB_STATE_CHANGED && plot.db_state_building != DB_STATE_NEW)
                 continue;
@@ -823,21 +827,19 @@ void Garrison::Upgrade()
 
     WorldPackets::Garrison::GarrisonUpgradeResult result;
 
-    uint32 garrLvl = site->GarrLevel;
-
-    // check for cheting / modification in client
-    if (garrLvl == 3)
+    uint32 canUpgradeResult = CanUpgrade(_owner, site);
+    if (canUpgradeResult != GARRISON_SUCCESS)
     {
-        result.Result = GARRISON_ERROR_UPGRADE_LEVEL_EXCEEDS_GARRISON_LEVEL;
+        result.Result = canUpgradeResult;
         _owner->SendDirectMessage(result.Write());
         return;
     }
     GarrSiteLevelEntry const* newSiteLevel = nullptr;
     for (GarrSiteLevelEntry const* v : sGarrSiteLevelStore)
-        if (v->GarrSiteID == site->GarrSiteID && v->GarrLevel == garrLvl + 1)
+        if (v->GarrSiteID == site->GarrSiteID && v->GarrLevel == site->GarrLevel + 1)
             newSiteLevel = v;
 
-    if (newSiteLevel && newSiteLevel->GarrLevel == garrLvl)
+    if (newSiteLevel && newSiteLevel->GarrLevel == site->GarrLevel)
     {
         result.Result = GARRISON_ERROR_NO_BUILDING;
         _owner->SendDirectMessage(result.Write());
@@ -901,6 +903,12 @@ void Garrison::Upgrade()
     if (oldSite->UpgradeGoldCost)
         _owner->ModifyMoney(int64(oldSite->UpgradeGoldCost) * GOLD * -1, false);
 
+    // complete Bigger is Better or Building my own Castle/Fortress
+    if (oldSite->GarrLevel == 1)
+        _owner->AchieveCriteriaCredit(_owner->GetTeam() == ALLIANCE ? 38378 : 38354);
+    if (oldSite->GarrLevel == 2)
+        _owner->AchieveCriteriaCredit(_owner->GetTeam() == ALLIANCE ? 38529 : 38531);
+
     // Save us
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHARACTER_GARRISON);
     stmt->setUInt32(0, newSiteLevel->ID);
@@ -945,6 +953,63 @@ void Garrison::Update(uint32 diff)
         return;
 
     updateTimer.Reset();
+
+    //! could be null
+    Map* map = FindMap();
+    for (auto& p : _plots)
+    {
+        if (p.second.buildingActivationWaiting && map && p.second.BuildingInfo.CanActivate() && p.second.BuildingInfo.PacketInfo && !p.second.BuildingInfo.PacketInfo->Active)
+        {
+            p.second.buildingActivationWaiting = false;
+
+            if (FinalizeGarrisonPlotGOInfo const* finalizeInfo = sGarrisonMgr.GetPlotFinalizeGOInfo(p.second.PacketInfo.GarrPlotInstanceID))
+            {
+                Position const& pos2 = finalizeInfo->FactionInfo[GetFaction()].Pos;
+                GameObject* finalizer = sObjectMgr->IsStaticTransport(finalizeInfo->FactionInfo[GetFaction()].GameObjectId) ? new StaticTransport : new GameObject;
+                if (finalizer->Create(sObjectMgr->GetGenerator<HighGuid::GameObject>()->Generate(), finalizeInfo->FactionInfo[GetFaction()].GameObjectId, map, 1, pos2, G3D::Quat(), 255, GO_STATE_READY))
+                {
+                    // set some spell id to make the object delete itself after use
+                    finalizer->SetSpellId(finalizer->GetGOInfo()->goober.spell);
+                    finalizer->SetRespawnTime(0);
+
+                    finalizer->SetAnimKitId(1696);
+
+                    map->AddToMap(finalizer);
+                }
+                else
+                    delete finalizer;
+            }
+        }
+    }
+
+    for (std::pair<const uint32, Plot>& plot : _plots)
+    {
+        if (plot.second.BuildingInfo.PacketInfo && !plot.second.BuildingInfo.PacketInfo->Active && !plot.second.BuildingInfo.FinalizerGuid && plot.second.BuildingInfo.CanActivate())
+        {
+            if (FinalizeGarrisonPlotGOInfo const* finalizeInfo = sGarrisonMgr.GetPlotFinalizeGOInfo(plot.second.PacketInfo.GarrPlotInstanceID))
+            {
+                if (Map* map = FindMap())
+                {
+                    Position const& pos2 = finalizeInfo->FactionInfo[GetFaction()].Pos;
+                    GameObject* finalizer = sObjectMgr->IsStaticTransport(finalizeInfo->FactionInfo[GetFaction()].GameObjectId) ? new StaticTransport : new GameObject;
+                    if (finalizer->Create(sObjectMgr->GetGenerator<HighGuid::GameObject>()->Generate(), finalizeInfo->FactionInfo[GetFaction()].GameObjectId, map, 1,
+                        pos2, G3D::Matrix3::fromEulerAnglesZYX(pos2.GetOrientation(), 0.0f, 0.0f), 255, GO_STATE_READY) && finalizer->IsPositionValid() && map->AddToMap(finalizer))
+                    {
+                        // set some spell id to make the object delete itself after use
+                        finalizer->SetSpellId(finalizer->GetGOInfo()->goober.spell);
+
+                        finalizer->SetRespawnTime(0);
+                        if (uint16 animKit = finalizeInfo->FactionInfo[GetFaction()].AnimKitId)
+                            finalizer->SetAnimKitId(animKit, true);
+
+                        plot.second.BuildingInfo.FinalizerGuid = finalizer->GetGUID();
+                    }
+                    else
+                        delete finalizer;
+                }
+            }
+        }
+    }
 
     for (auto data : _shipments)
     {
@@ -1169,6 +1234,7 @@ void Garrison::PlaceBuilding(uint32 garrPlotInstanceId, uint32 garrBuildingId, b
         placeBuildingResult.BuildingInfo.TimeBuilt = time(nullptr);
 
         Plot* plot = GetPlot(garrPlotInstanceId);
+        plot->buildingActivationWaiting = true;
 
         uint32 oldBuildingId = 0;
         Map* map = FindMap();
@@ -1286,6 +1352,7 @@ void Garrison::ActivateBuilding(uint32 garrPlotInstanceId)
         if (plot->BuildingInfo.CanActivate() && plot->BuildingInfo.PacketInfo && !plot->BuildingInfo.PacketInfo->Active)
         {
             plot->BuildingInfo.PacketInfo->Active = true;
+			plot->BuildingInfo.FinalizerGuid.Clear();
 
             if (Map* map = FindMap())
             {
@@ -1297,6 +1364,8 @@ void Garrison::ActivateBuilding(uint32 garrPlotInstanceId)
             WorldPackets::Garrison::GarrisonBuildingActivated buildingActivated;
             buildingActivated.GarrPlotInstanceID = garrPlotInstanceId;
             _owner->SendDirectMessage(buildingActivated.Write());
+
+            _owner->UpdateAchievementCriteria(CRITERIA_TYPE_CONSTRUCT_GARRISON_BUILDING, plot->BuildingInfo.PacketInfo->GarrBuildingID);
 
             plot->db_state_building = DB_STATE_CHANGED;
             SendInfo();
@@ -1311,7 +1380,8 @@ uint32 Garrison::GetCountOfBluePrints() const
 
 uint32 Garrison::GetCountOFollowers() const
 {
-    return _followers[GARRISON_TYPE_GARRISON].size();
+    uint8 type = _owner->GetMap()->GetEntry()->ExpansionID == 5 ? GARRISON_TYPE_GARRISON : GARRISON_TYPE_CLASS_ORDER;
+    return _followers[type].size();
 }
 
 uint32 Garrison::GetBuildingData(uint32 buildingType, uint32 idx)
@@ -1954,33 +2024,40 @@ void Garrison::SendBuildingLandmarks(Player* receiver) const
     receiver->SendDirectMessage(buildingLandmarks.Write());
 }
 
-void Garrison::SendGarrisonUpgradebleResult(Player* receiver, int32 garrTypeID) const
+uint32 Garrison::CanUpgrade(Player* receiver, GarrSiteLevelEntry const* site) const
 {
-    if (garrTypeID != GARRISON_TYPE_GARRISON)
-        return;
-
-    auto site = _siteLevel[GARRISON_TYPE_GARRISON];
-    if (!site)
-        return;
-
-    //!
-    //@TODO worn on checks... exmaple: at first lvl u cant upgrade if u hadnt complete quest line
-    // Quest line with rew. item 118215
-    WorldPackets::Garrison::GarrisonIsUpgradeableResult result;
+    uint32 result = GARRISON_SUCCESS;
     switch (site->GarrLevel)
     {
         case 1: 
-        case 2: //Requare Alliance Q: 36592, Horde Q: 36567
-            result.Result = _plots.size() < 2 ? GARRISON_ERROR_INVALID_UPGRADE_LEVEL : GARRISON_SUCCESS;
+            // require bigger is better quest
+            if (receiver->GetQuestStatus(receiver->GetTeam() == ALLIANCE ? 36592 : 36567) != QUEST_STATUS_INCOMPLETE)
+                result = GARRISON_ERROR_UPGRADE_CONDITION_FAILED;
+            break;
+        case 2:
+            // require building my own castle/fortress
+            if (receiver->GetQuestStatus(receiver->GetTeam() == ALLIANCE ? 36615 : 36614) != QUEST_STATUS_INCOMPLETE)
+                result = GARRISON_ERROR_UPGRADE_CONDITION_FAILED;
             break;
         default:
-            result.Result = GARRISON_ERROR_UPGRADE_LEVEL_EXCEEDS_GARRISON_LEVEL;
+            result = GARRISON_ERROR_UPGRADE_LEVEL_EXCEEDS_GARRISON_LEVEL;
             break;
     }
 
     if (sWorld->getBoolConfig(CONFIG_DISABLE_GARE_UPGRADE))
-        result.Result = GARRISON_ERROR_UPGRADE_LEVEL_EXCEEDS_GARRISON_LEVEL;
+        result = GARRISON_ERROR_UPGRADE_LEVEL_EXCEEDS_GARRISON_LEVEL;
 
+    return result;
+}
+
+void Garrison::SendGarrisonUpgradebleResult(Player* receiver, int32 garrSiteID) const
+{
+    auto site = _siteLevel[GARRISON_TYPE_GARRISON];
+    if (!site)
+        return;
+
+    WorldPackets::Garrison::GarrisonIsUpgradeableResult result;
+    result.Result = site->GarrSiteID == garrSiteID ? CanUpgrade(receiver, site) : GARRISON_ERROR_INVALID_SITE_ID;
     receiver->SendDirectMessage(result.Write());
 }
 
@@ -1988,7 +2065,7 @@ void Garrison::SendGarrisonUpgradebleResult(Player* receiver, int32 garrTypeID) 
 Map* Garrison::FindMap() const
 {
     if (auto site = _siteLevel[GARRISON_TYPE_GARRISON])
-        return sMapMgr->FindMap(site->MapID, _owner->GetGUIDLow());
+        return sMapMgr->FindMap(site->MapID, _owner->GetGUIDLow() | 1 << 0x1E);
     return nullptr;
 }
 
@@ -2564,9 +2641,9 @@ The Garrison Cache next to your Town Hall accumulates  Garrison Resources (GR)
 at a rate of 1 GR every 10 minutes of real time (6 per hour),
 which works out to 144 GR every full day (6 x 24hrs = 144 GR).
 
-Within 3 days and 10 hours, the limit of 500 resources will be reached.
+За 3-е суток и 10 часов будет достигнут лимит в 500 ресурсов.
 
-When purchasing and using trade agreements: Arakka hooligans (sold in the Tanan jungle), the inventory is limited to 1000 resources. 6 days and 20 hours.
+При покупке и использовании  Торговое соглашение: араккоа-изгои (продается в Танаанских джунглях) лимит склада становится равным 1000 ресурсов. = 6 суток 20 часов.
 */
 uint32 Garrison::GetResNumber() const
 {

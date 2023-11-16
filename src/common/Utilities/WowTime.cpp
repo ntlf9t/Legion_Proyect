@@ -270,7 +270,7 @@ time_t WowTime::GetPosixTimeFromUTC()
 
         if (Hour >= 0)
         {
-            timeInfo.tm_hour = Hour;
+            timeInfo.tm_hour = Hour + 8;
 
             if (Minute >= 0)
                 timeInfo.tm_min = Minute;
@@ -322,7 +322,7 @@ void WowTime::SetUTCTimeFromPosixTime(time_t posixTime)
     Year = timeInfo.tm_year - 100;
     Month = timeInfo.tm_mon;
     MonthDay = timeInfo.tm_mday - 1;
-    Hour = timeInfo.tm_hour;
+    Hour = timeInfo.tm_hour + 8;//中国时区就+8
     Minute = timeInfo.tm_min;
     WeekDay = timeInfo.tm_wday;
 }

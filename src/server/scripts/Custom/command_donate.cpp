@@ -14,52 +14,52 @@ public:
 
         static std::vector<ChatCommand> morphCommandTable =
         {
-            { "list",           SEC_PLAYER,         false, &HandleListMorphCommand,             ""},
-            { "use",            SEC_PLAYER,         false, &HandleUseMorphCommand,              ""},
-            { "remove",         SEC_PLAYER,         false, &HandleRemoveMorphCommand,           ""},
-            { "add",            SEC_ADMINISTRATOR,  false, &HandleAddMorphCommand,              ""},
-            { "del",            SEC_ADMINISTRATOR,  false, &HandleDelMorphCommand,              ""}
+            { "list",           SEC_PLAYER,         false, &HandleListMorphCommand,                       ""},
+            { "use",            SEC_PLAYER,         false, &HandleUseMorphCommand,                        ""},
+            { "remove",         SEC_PLAYER,         false, &HandleRemoveMorphCommand,                     ""},
+            { "add",            SEC_ADMINISTRATOR,  false, &HandleAddMorphCommand,                        ""},
+            { "del",            SEC_ADMINISTRATOR,  false, &HandleDelMorphCommand,                        ""}
         };
         
         static std::vector<ChatCommand> mountFlyCommandTable =
         {
-            { "list",           SEC_PLAYER,         false, &HandleListMountFlyCommand,             ""},
-            { "use",            SEC_PLAYER,         false, &HandleUseMountFlyCommand,              ""},
-            { "add",            SEC_ADMINISTRATOR,  false, &HandleAddMountFlyCommand,              ""},
-            { "del",            SEC_ADMINISTRATOR,  false, &HandleDelMountFlyCommand,              ""}
+            { "list",           SEC_PLAYER,         false, &HandleListMountFlyCommand,                    ""},
+            { "use",            SEC_PLAYER,         false, &HandleUseMountFlyCommand,                     ""},
+            { "add",            SEC_ADMINISTRATOR,  false, &HandleAddMountFlyCommand,                     ""},
+            { "del",            SEC_ADMINISTRATOR,  false, &HandleDelMountFlyCommand,                     ""}
         };
         
         static std::vector<ChatCommand> mountGroundCommandTable =
         {
-            { "list",           SEC_PLAYER,         false, &HandleListMountGroundCommand,             ""},
-            { "use",            SEC_PLAYER,         false, &HandleUseMountGroundCommand,              ""},
-            { "add",            SEC_ADMINISTRATOR,  false, &HandleAddMountGroundCommand,              ""},
-            { "del",            SEC_ADMINISTRATOR,  false, &HandleDelMountGroundCommand,              ""}
+            { "list",           SEC_PLAYER,         false, &HandleListMountGroundCommand,                  ""},
+            { "use",            SEC_PLAYER,         false, &HandleUseMountGroundCommand,                   ""},
+            { "add",            SEC_ADMINISTRATOR,  false, &HandleAddMountGroundCommand,                   ""},
+            { "del",            SEC_ADMINISTRATOR,  false, &HandleDelMountGroundCommand,                   ""}
         };
         
         static std::vector<ChatCommand> mountCommandTable =
         {
-            { "fly",           SEC_PLAYER,         false, NULL,             "", mountFlyCommandTable },
-            { "ground",        SEC_PLAYER,         false, NULL,             "", mountGroundCommandTable }
+            { "fly",           SEC_PLAYER,          false, NULL,                    "", mountFlyCommandTable },
+            { "ground",        SEC_PLAYER,          false, NULL,                 "", mountGroundCommandTable }
         };
         
         static std::vector<ChatCommand> tokensCommandTable =
         {
-            { "info",           SEC_CONFIRMED_GAMEMASTER,         false, &HandleInfoTokensCommand,           ""},
-            { "modify",         SEC_ADMINISTRATOR,         false, &HandleModTokensCommand,            ""},
+            { "info",          SEC_ADMINISTRATOR,   false, &HandleInfoTokensCommand,                       ""},
+            { "modify",        SEC_ADMINISTRATOR,   false, &HandleModTokensCommand,                        ""},
         };
 
         static std::vector<ChatCommand> donateCommandTable =
         {
-            { "morph",          SEC_PLAYER,         false, NULL,                                "", morphCommandTable },
-            { "mount",          SEC_PLAYER,         false, NULL,                                "", mountCommandTable },
-            { "add",            SEC_ADMINISTRATOR,  false, &HandleAddDonatCommand,              ""},
-            { "tokens",         SEC_CONFIRMED_GAMEMASTER,  false, NULL,                         "", tokensCommandTable }
+            { "morph",          SEC_PLAYER,         false, NULL,                       "", morphCommandTable },
+            { "mount",          SEC_PLAYER,         false, NULL,                       "", mountCommandTable },
+            { "add",            SEC_ADMINISTRATOR,  false, &HandleAddDonatCommand,                         ""},
+            { "tokens",         SEC_ADMINISTRATOR,  false, NULL,                      "", tokensCommandTable }
         };
 
         static std::vector<ChatCommand> commandTable =
         {
-            { "donate",         SEC_PLAYER,         false, NULL,                                "", donateCommandTable }
+            { "donate",         SEC_PLAYER,         false, NULL,                      "", donateCommandTable }
         };
         return commandTable;
     }

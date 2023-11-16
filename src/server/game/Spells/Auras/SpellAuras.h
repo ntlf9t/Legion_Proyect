@@ -252,17 +252,6 @@ class Aura
         bool CanStackWith(Aura const* existingAura) const;
         uint8 GetSpawnMode() const { return m_diffMode; }
 
-        // Proc system
-        // this subsystem is not yet in use - the core of it is functional, but still some research has to be done
-        // and some dependant problems fixed before it can replace old proc system (for example cooldown handling)
-        // currently proc system functionality is implemented in Unit::ProcDamageAndSpell
-        bool IsProcOnCooldown() const;
-        void AddProcCooldown(uint32 msec);
-        void PrepareProcToTrigger(AuraApplication* aurApp, ProcEventInfo& eventInfo);
-        bool IsProcTriggeredOnEvent(AuraApplication* aurApp, ProcEventInfo& eventInfo) const;
-        float CalcProcChance(SpellProcEntry const& procEntry, ProcEventInfo& eventInfo) const;
-        void TriggerProcOnEvent(AuraApplication* aurApp, ProcEventInfo& eventInfo);
-
         // AuraScript
         void LoadScripts();
         bool CallScriptCheckAreaTargetHandlers(Unit* target);

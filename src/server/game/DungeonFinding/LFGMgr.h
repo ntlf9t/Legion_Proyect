@@ -320,13 +320,15 @@ public:
     static LFGMgr* instance();
     void Update(uint32 diff);
 
-    void FinishDungeon(ObjectGuid gguid, uint32 dungeonId);
+    void FinishDungeon(ObjectGuid gguid, uint32 dungeonId, Map const* currMap);
     void LoadRewards();
     void LoadLFGDungeons(bool reload = false);
 
     bool selectedRandomLfgDungeon(ObjectGuid guid, uint32 queueId);
     bool inLfgDungeonMap(ObjectGuid guid, uint32 map, Difficulty difficulty, uint32& queueId);
     LfgDungeonSet const& GetSelectedDungeons(ObjectGuid guid, uint32 queueId);
+    /// Get selected random dungeon
+    uint32 GetSelectedRandomDungeon(ObjectGuid guid, uint32 queueI);
     LfgState GetState(ObjectGuid guid, uint32 queueId);
     uint32 GetDungeon(ObjectGuid guid, bool asId = true);
     uint32 GetDungeonMapId(ObjectGuid guid);
@@ -369,7 +371,7 @@ public:
     void UpdateRoleCheck(ObjectGuid gguid, ObjectGuid guid = ObjectGuid::Empty, uint8 roles = PLAYER_ROLE_NONE, uint8 partyIndex = 0);
     void SetRoles(ObjectGuid guid, uint8 roles, uint32 queueId);
     void JoinLfg(Player* player, uint8 roles, LfgDungeonSet& dungeons);
-    void LeaveLfg(ObjectGuid guid, uint32 queueId = 0);
+    void LeaveLfg(ObjectGuid guid, uint32 queueId = 0, bool disconnected = false);
     WorldPackets::LFG::RideTicket const* GetTicket(ObjectGuid guid, uint32 queueId) const;
 
     LfgLockMap GetLockedDungeons(ObjectGuid guid);
@@ -429,6 +431,7 @@ public:
 private:
     void SetTicket(ObjectGuid guid, WorldPackets::LFG::RideTicket const& ticket, uint32 queueId);
     uint8 GetTeam(ObjectGuid guid, uint32 queueId);
+	uint8 FilterClassRoles(Player* player, uint8 roles);
     void RestoreState(ObjectGuid guid, char const* debugMsg, uint32 queueId);
     void SetDungeon(ObjectGuid guid, uint32 dungeon);
     void SetSelectedDungeons(ObjectGuid guid, LfgDungeonSet const& dungeons, uint32 queueId);

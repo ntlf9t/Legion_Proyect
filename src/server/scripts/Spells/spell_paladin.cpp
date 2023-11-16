@@ -47,6 +47,8 @@ enum PaladinSpells
     DivineTempestAura                            = 186773,
     DivineTempest                                = 186775,
     DivineStormDamage                            = 224239,
+    SPELL_PALADIN_EYE_FOR_AN_EYE_DAMAGE          = 205202,
+	SPELL_PALADIN_SHIELD_OF_VENGEANCE_DAMAGE     = 184689,
     BlessingOfTheAshbringer                      = 242981,
     GreaterBlessingOfKings                       = 203538,
     GreaterBlessingOfWisdom                      = 203539,
@@ -337,6 +339,27 @@ class spell_pal_divine_storm : public SpellScriptLoader
     SpellScript* GetSpellScript() const override
     {
         return new spell_pal_divine_storm_SpellScript();
+    }
+};
+
+// 205191 - Eye for an Eye
+class spell_pal_eye_for_an_eye : public AuraScript
+{
+    PrepareAuraScript(spell_pal_eye_for_an_eye);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PALADIN_EYE_FOR_AN_EYE_DAMAGE });
+    }
+
+    void HandleEffectProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        GetTarget()->CastSpell(eventInfo.GetProcTarget(), SPELL_PALADIN_EYE_FOR_AN_EYE_DAMAGE, true);
+    }
+
+    void Register() override
+    {
+        OnEffectProc += AuraEffectProcFn(spell_pal_eye_for_an_eye::HandleEffectProc, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };
 
@@ -1007,10 +1030,10 @@ class spell_pal_shield_of_vengeance : public SpellScriptLoader
 
             void CalculateAmount(AuraEffect const* /*aurEff*/, float & amount, bool & canBeRecalculated)
             {
-                if (Unit* caster = GetCaster())
+               if (Unit* caster = GetCaster())
                 {
                     if (amount)
-                        amount = absorbMax = int32(caster->GetTotalAttackPowerValue(BASE_ATTACK) * GetSpellInfo()->Effects[EFFECT_1]->BasePoints) * amount;
+                        amount = absorbMax = int32(caster->GetTotalAttackPowerValue(BASE_ATTACK) * GetSpellInfo()->Effects[EFFECT_1]->BasePoints) * amount + 8.0f;
                     else
                         amount = absorbMax = int32(caster->GetTotalAttackPowerValue(BASE_ATTACK) * GetSpellInfo()->Effects[EFFECT_1]->BasePoints);
                 }
@@ -1022,8 +1045,7 @@ class spell_pal_shield_of_vengeance : public SpellScriptLoader
                     return;
                 startRemove = true;
                 if (Unit* caster = GetCaster())
-                    if (GetTargetApplication()->GetRemoveMode() == AURA_REMOVE_BY_ENEMY_SPELL)
-                        caster->CastCustomSpell(caster, 184689, &absorbA, nullptr, nullptr, true);
+                    caster->CastCustomSpell(caster, 184689, &absorbA, nullptr, nullptr, true);
             }
 
             void Absorb(AuraEffect* aurEff, DamageInfo & dmgInfo, float & absorbAmount)
@@ -1401,7 +1423,7 @@ struct spell_pal_at_aura_of_sacrifice : public AreaTriggerAI
     {
         SetAuraMastery(Num);
         SetTimer();
-        return NULL;
+        return 0;
     }
 
     void OnUnitEnter(Unit* /*unit*/) override
@@ -2961,6 +2983,7 @@ void AddSC_paladin_spell_scripts()
     new spell_pal_power_of_the_silver_hand();
     new spell_pal_bulwark_of_order();
     new spell_pal_divine_storm();
+    RegisterAuraScript(spell_pal_eye_for_an_eye);
     new areatrigger_at_divine_tempest();
     new spell_pal_first_avenger();
     new spell_pal_greater_blessing_of_wisdom();

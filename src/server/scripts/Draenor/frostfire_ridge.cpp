@@ -59,7 +59,7 @@ public:
         EventMap events;
         ObjectGuid treeGUID;
 
-        void InitializeAI()
+        void InitializeAI() override
         { 
             Reset();
             events.RescheduleEvent(TEXT_GENERIC_2, 1000);
@@ -90,7 +90,7 @@ public:
             return true;
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             events.Update(diff);
             if (uint32 eventId = events.ExecuteEvent())

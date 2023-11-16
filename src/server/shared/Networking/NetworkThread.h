@@ -181,7 +181,7 @@ private:
     std::mutex _newSocketsLock;
     SocketContainer _newSockets;
 
-    boost::asio::io_service _io_service;
+    boost::asio::io_context _io_service;
     tcp::socket _acceptSocket;
     boost::asio::deadline_timer _updateTimer;
 };

@@ -9,7 +9,7 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 # Gather source files.
-GetFilesWithSourceGroups(GLOB_RECURSE CDS_FILES ${CMAKE_CURRENT_SOURCE_DIR} src/*.cpp cds/*.h)
+file(GLOB_RECURSE CDS_FILES ${CMAKE_CURRENT_SOURCE_DIR} src/*.cpp cds/*.h)
 
 # Define library target.
 # add_library(cds ${CDS_FILES})
@@ -24,6 +24,10 @@ add_library(cds STATIC ${CDS_FILES})
 target_include_directories(cds
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_link_libraries(cds
+  PRIVATE
+    trinity-dependency-interface)
 	
 set_target_properties(cds
     PROPERTIES

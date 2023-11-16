@@ -436,7 +436,7 @@ class spell_neesa_ogre_traps : public AuraScript
 
     uint8 Idx;
 
-    bool Load()
+    bool Load() override
     {
         Idx = 0;
         return true;

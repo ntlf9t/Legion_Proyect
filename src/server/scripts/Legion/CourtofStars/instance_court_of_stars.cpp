@@ -56,8 +56,8 @@ public:
                 case 107435:    
                     if (!guidEvent)
                         if (urand(0, 100) >= 70)
-                            guidEvent = creature->GetGUID(); 
-                    guidEventSave = creature->GetGUID(); 
+                            guidEvent = creature->GetGUID();
+                    guidEventSave = creature->GetGUID();
                     break;
             } 
         }

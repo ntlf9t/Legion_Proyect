@@ -325,7 +325,7 @@ public:
 				else
 					this->fCacheStream << ", \n";
 				//
-				// Insertar los parÃ¡metros.
+				// Insertar los parámetros.
 				this->fCacheStream
 					<< "('" << QuestID << "',"
 					<< " '" << BlobIndex << "',"
@@ -378,7 +378,7 @@ public:
 				Field* _Fields = _Result->Fetch();		// Materializar la fila en un objeto
 
 														//
-														// Obtener cada uno de los parÃ¡metros de la tabla de la bd segÃºn sus indices
+														// Obtener cada uno de los parámetros de la tabla de la bd según sus indices
 				uint32 QuestID = _Fields[_Index++].GetUInt32();
 				uint32 Idx1 = _Fields[_Index++].GetUInt32();
 				uint32 Idx2 = _Fields[_Index++].GetUInt32();
@@ -403,7 +403,7 @@ public:
 				else
 					this->fCacheStream << ", \n";
 				//
-				// Insertar los parÃ¡metros.
+				// Insertar los parámetros.
 				this->fCacheStream
 					<< "('" << QuestID << "',"
 					<< " '" << Idx1 << "',"
@@ -1091,7 +1091,7 @@ public:
 				Field* _Fields = _Result->Fetch();		// Materializar la fila en un objeto
 
 														//
-														// Obtener cada uno de los parÃ¡metros de la tabla de la bd segÃºn sus indices
+														// Obtener cada uno de los parámetros de la tabla de la bd según sus indices
 				uint32 id = _Fields[_Index++].GetUInt32();
 				uint32 point = _Fields[_Index++].GetUInt32();
 				float position_x = _Fields[_Index++].GetFloat();
@@ -1130,7 +1130,7 @@ public:
 				else
 					this->fCacheStream << ", \n";
 				//
-				// Insertar los parÃ¡metros.
+				// Insertar los parámetros.
 				this->fCacheStream
 					<< "(" << "@GUID" << ","
 					<< " '" << point << "',"
@@ -1630,7 +1630,7 @@ public:
 			Field* _Fields = _Result->Fetch();		// Materializar la fila en un objeto
 
 													//
-													// Obtener cada uno de los parÃ¡metros de la tabla de la bd segÃºn sus indices
+													// Obtener cada uno de los parámetros de la tabla de la bd según sus indices
 			uint32 _Menuid = uint32(_Fields[_Index++].GetUInt16());
 			uint32 OptionIndex = uint32(_Fields[_Index++].GetUInt16());
 			uint32 _OptionNPC = _Fields[_Index++].GetUInt32();
@@ -1654,7 +1654,7 @@ public:
 				<< "`OptionNpcFlag`, "
 				<< "`VerifiedBuild`) VALUES \n";
 			//
-			// Insertar los parÃ¡metros.
+			// Insertar los parámetros.
 			this->fCacheStream
 				<< "('" << _Menuid << "',"
 				<< " '" << OptionIndex << "',"
@@ -1717,7 +1717,7 @@ public:
 					<< "`Importance`,"
 					<< "`Name`,"
 					<< "`VerifiedBuild`) VALUES \n";
-				// Insertar los parÃ¡metros.
+				// Insertar los parámetros.
 				this->fCacheStream
 					<< "('" << ID << "',"
 					<< "'" << PositionX << "',"
@@ -2918,7 +2918,7 @@ public:
 		return true;
 	}
 
-	void FlushToFile(std::string &aFileName, int aEntry, std::string &aCreatureName)
+	void FlushToFile(const std::string &aFileName, int aEntry, std::string &aCreatureName)
 	{
 		time_t _CurTime = time(NULL);
 		tm* _LocalTm = localtime(&_CurTime);
@@ -3975,7 +3975,7 @@ public:
 				_Fields = _Result->Fetch();		// Materializar la fila en un objeto
 
 												//
-												// Obtener cada uno de los parÃ¡metros de la tabla de la bd segÃºn sus indices
+												// Obtener cada uno de los parámetros de la tabla de la bd según sus indices
 				summonerId = _Fields[_Index++].GetUInt32();
 				summonerType = _Fields[_Index++].GetUInt8();
 				groupId = _Fields[_Index++].GetUInt8();
@@ -4009,7 +4009,7 @@ public:
 					this->fCacheStream << ", \n";
 
 				//
-				// Insertar los parÃ¡metros.
+				// Insertar los parámetros.
 				this->fCacheStream
 					//<< "('" << summonerId << "',"
 					<< "(" << "@ENTRY" << ","
@@ -4190,7 +4190,7 @@ public:
 				_Fields = _Result->Fetch();		// Materializar la fila en un objeto
 
 												//
-												// Obtener cada uno de los parÃ¡metros de la tabla de la bd segÃºn sus indices
+												// Obtener cada uno de los parámetros de la tabla de la bd según sus indices
 				npc_entry = _Fields[_Index++].GetUInt32();
 				spell_id = _Fields[_Index++].GetUInt32();
 				cast_flags = _Fields[_Index++].GetUInt8();
@@ -4212,7 +4212,7 @@ public:
 					this->fCacheStream << ", " << " /*" << " Spell(" << spell_id << "): " << "*/" "\n";
 
 				//
-				// Insertar los parÃ¡metros.
+				// Insertar los parámetros.
 				this->fCacheStream
 					//<< "('" << npc_entry << "',"
 					<< "(" << "@ENTRY" << ","
@@ -4265,7 +4265,7 @@ public:
 				_Fields = _Result->Fetch();		// Materializar la fila en un objeto
 
 												//
-												// Obtener cada uno de los parÃ¡metros de la tabla de la bd segÃºn sus indices
+												// Obtener cada uno de los parámetros de la tabla de la bd según sus indices
 				entry = _Fields[_Index++].GetUInt32();
 				pointid = _Fields[_Index++].GetUInt32();
 				position_x = _Fields[_Index++].GetFloat();
@@ -4291,7 +4291,7 @@ public:
 					this->fCacheStream << ", \n";
 
 				//
-				// Insertar los parÃ¡metros.
+				// Insertar los parámetros.
 				this->fCacheStream
 					//<< "('" << entry << "',"
 					<< "(" << "@ENTRY" << ","
@@ -4339,7 +4339,7 @@ public:
 				Field* _Fields = _Result->Fetch();		// Materializar la fila en un objeto
 
 														//
-														// Obtener cada uno de los parÃ¡metros de la tabla de la bd segÃºn sus indices
+														// Obtener cada uno de los parámetros de la tabla de la bd según sus indices
 				uint32 entry = _Fields[_Index++].GetUInt32();
 				uint32 TextId = _Fields[_Index++].GetUInt32();
 				uint32 FriendshipFactionID = _Fields[_Index++].GetUInt32();
@@ -4359,7 +4359,7 @@ public:
 					this->fCacheStream << ", \n";
 
 				//
-				// Insertar los parÃ¡metros.
+				// Insertar los parámetros.
 				this->fCacheStream
 					<< "(" << entry << ","
 					<< "" << TextId << ","
@@ -4477,7 +4477,7 @@ public:
 				}
 				else
 					this->fCacheStream << ", \n";
-				// Insertar los parÃ¡metros.
+				// Insertar los parámetros.
 				this->fCacheStream
 					<< "('" << ID << "',"
 					<< " '" << MaxLevel << "',"
@@ -4566,7 +4566,7 @@ public:
 				}
 				else
 					this->fCacheStream << ", \n";
-				// Insertar los parÃ¡metros.
+				// Insertar los parámetros.
 				this->fCacheStream
 					<< "(" << ID << ","
 					//<< " '" << "@ENTRY" << "',"
@@ -4621,8 +4621,7 @@ public:
 			//
 			// Exportar para el fichero
 			_FileName << "Export/" << "GameObject " << "[" << aEntry << "] " << CheckName(_GameObjectName) << ".sql";
-			std::string _fName = _FileName.str();
-			this->FlushToFile(_fName, aEntry, _GameObjectName);
+			this->FlushToFile(_FileName.str(), aEntry, _GameObjectName);
 
 			this->fHandler->PSendSysMessage("%s gameobject_template exported in: %u ms.", _GameObjectName.c_str(), ::GetMSTimeDiffToNow(_StartTime));
 			return true;
@@ -4731,8 +4730,7 @@ public:
 			//
 			// Exportar para el fichero
 			_FileName << "Export/" << "Quest " << "[" << aEntry << "] " << CheckName(_QuestName) << ".sql";
-			std::string _fName = _FileName.str();
-			this->FlushToFile(_fName, aEntry, _QuestName);
+			this->FlushToFile(_FileName.str(), aEntry, _QuestName);
 
 			this->fHandler->PSendSysMessage("%s quest_template exported in: %u ms.", _QuestName.c_str(), ::GetMSTimeDiffToNow(_StartTime));
 			return true;
@@ -4811,8 +4809,7 @@ public:
 			this->exportNpcSpellclickSpells(aEntry);
 
 			_FileName << "Export/" << "Creature " << "[" << aEntry << "] " << CheckName(_CreatureName) << " " << ".sql";
-			std::string _fName = _FileName.str();
-			this->FlushToFile(_fName, aEntry, _CreatureName);
+			this->FlushToFile(_FileName.str(), aEntry, _CreatureName);
 			//
 			// Notificar q todo acabo ok
 			this->fHandler->PSendSysMessage("%s creature exported in: %u ms.", _CreatureName.c_str(), ::getMSTime() - _StartTime);
@@ -4829,7 +4826,7 @@ class export_commandscript : public CommandScript
 public:
 	export_commandscript() : CommandScript("export_commandscript") { }
 
-	std::vector<ChatCommand> GetCommands() const
+	std::vector<ChatCommand> GetCommands() const override
 	{
 		static std::vector<ChatCommand> exportCommandTable =
 		{

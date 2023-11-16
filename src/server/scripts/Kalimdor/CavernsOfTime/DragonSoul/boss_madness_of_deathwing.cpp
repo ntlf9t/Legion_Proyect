@@ -2102,7 +2102,7 @@ class npc_madness_of_deathwing_deathwing : public CreatureScript
                         Map::PlayerList const& players = instance->instance->GetPlayers();
                         if (!players.isEmpty())
                             if (players.begin()->getSource()->GetGroup())
-                                sLFGMgr->FinishDungeon(players.begin()->getSource()->GetGroup()->GetGUID(), 417);
+                                sLFGMgr->FinishDungeon(players.begin()->getSource()->GetGroup()->GetGUID(), 417, me->GetMap());
                         if (Creature* pThrall = me->FindNearestCreature(NPC_THRALL_2, 500.0f))
                             pThrall->AI()->DoAction(ACTION_END_BATTLE);
                         switch (GetDifficultyID())

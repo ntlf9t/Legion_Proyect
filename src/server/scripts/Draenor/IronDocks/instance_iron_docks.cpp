@@ -265,7 +265,7 @@ public:
             return saveStream.str();
         }
 
-        std::string GetSaveData()
+        std::string GetSaveData() override
         {
             OUT_SAVE_INST_DATA;
 

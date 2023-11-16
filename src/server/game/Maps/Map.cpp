@@ -1111,7 +1111,7 @@ void Map::Update(const uint32 t_diff)
 
     uint32 _ms = GetMSTimeDiffToNow(_s);
     if (_ms > 200)
-        sLog->outDiff("Map::Update Player mapId %u Update time - %ums diff %u Players online: %u i_InstanceId %u activeEntry %u", GetId(), _ms, t_diff, m_sessions.size(), i_InstanceId, m_activeEntry);
+        sLog->outDiff("Map::Update Player mapId %u Update time - %ums diff %u Players online: %lu i_InstanceId %u activeEntry %u", GetId(), _ms, t_diff, m_sessions.size(), i_InstanceId, m_activeEntry);
 
     if (b_isMapUnload)
         return;
@@ -1163,7 +1163,7 @@ void Map::Update(const uint32 t_diff)
 
     _ms = GetMSTimeDiffToNow(_s);
     if (_ms > 250)
-        sLog->outDiff("Map::Update Collected mapId %u Update time - %ums diff %u Players online: %u i_InstanceId %u activeEntry %u collectedCount %u", GetId(), _ms, t_diff, m_sessions.size(), i_InstanceId, m_activeEntry, collectedCount);
+        sLog->outDiff("Map::Update Collected mapId %u Update time - %ums diff %u Players online: %lu i_InstanceId %u activeEntry %u collectedCount %u", GetId(), _ms, t_diff, m_sessions.size(), i_InstanceId, m_activeEntry, collectedCount);
 
     // sWorldStateMgr.MapUpdate(this);
 
@@ -1187,7 +1187,7 @@ void Map::Update(const uint32 t_diff)
 
     _ms = GetMSTimeDiffToNow(_s);
     if (_ms > 250)
-        sLog->outDiff("Map::Update ScriptsProcess mapId %u Update time - %ums diff %u Players online: %u i_InstanceId %u activeEntry %u activeEncounter %u", GetId(), _ms, t_diff, m_sessions.size(), i_InstanceId, m_activeEntry, m_activeEncounter);
+        sLog->outDiff("Map::Update ScriptsProcess mapId %u Update time - %ums diff %u Players online: %lu i_InstanceId %u activeEntry %u activeEncounter %u", GetId(), _ms, t_diff, m_sessions.size(), i_InstanceId, m_activeEntry, m_activeEncounter);
 
     if (b_isMapUnload)
         return;
@@ -1199,7 +1199,7 @@ void Map::Update(const uint32 t_diff)
 
     _ms = GetMSTimeDiffToNow(_s);
     if (_ms > 250)
-        sLog->outDiff("Map::Update MoveAll mapId %u Update time - %ums diff %u Players online: %u i_InstanceId %u activeEntry %u activeEncounter %u", GetId(), _ms, t_diff, m_sessions.size(), i_InstanceId, m_activeEntry, m_activeEncounter);
+        sLog->outDiff("Map::Update MoveAll mapId %u Update time - %ums diff %u Players online: %lu i_InstanceId %u activeEntry %u activeEncounter %u", GetId(), _ms, t_diff, m_sessions.size(), i_InstanceId, m_activeEntry, m_activeEncounter);
 
     std::set<ObjectGuid> objectsTemp;
 
@@ -1251,7 +1251,7 @@ void Map::Update(const uint32 t_diff)
 
     _ms = GetMSTimeDiffToNow(_s);
     if (_ms > 250)
-        sLog->outDiff("Map::Update UpdateDataMap mapId %u Update time - %ums diff %u Players online: %u i_InstanceId %u activeEntry %u activeEncounter %u", GetId(), _ms, t_diff, m_sessions.size(), i_InstanceId, m_activeEntry, m_activeEncounter);
+        sLog->outDiff("Map::Update UpdateDataMap mapId %u Update time - %ums diff %u Players online: %lu i_InstanceId %u activeEntry %u activeEncounter %u", GetId(), _ms, t_diff, m_sessions.size(), i_InstanceId, m_activeEntry, m_activeEncounter);
 
     std::set<Object*> objectsAddTemp;
     if (!i_objectsAddToMap.empty())
@@ -1286,7 +1286,7 @@ void Map::Update(const uint32 t_diff)
 
     _ms = GetMSTimeDiffToNow(_s);
     if (_ms > 500) // Only lags
-        sLog->outDiff("Map::Update mapId %u Update time - %ums diff %u Players online: %u i_InstanceId %u activeEntry %u activeEncounter %u", GetId(), _ms, t_diff, m_sessions.size(), i_InstanceId, m_activeEntry, m_activeEncounter);
+        sLog->outDiff("Map::Update mapId %u Update time - %ums diff %u Players online: %lu i_InstanceId %u activeEntry %u activeEncounter %u", GetId(), _ms, t_diff, m_sessions.size(), i_InstanceId, m_activeEntry, m_activeEncounter);
 }
 
 void Map::UpdateSessions(uint32 diff)
@@ -3395,8 +3395,7 @@ bool Map::getObjectHitPos(std::set<uint32> const& phases, bool otherUsePlayerPha
 
 float Map::GetHeight(std::set<uint32> const& phases, float x, float y, float z, bool vmap /*= true*/, float maxSearchDist /*= DEFAULT_HEIGHT_SEARCH*/, DynamicTreeCallback* dCallback /*= nullptr*/) const
 {
-    if (!this)
-        return VMAP_INVALID_HEIGHT_VALUE;
+    return VMAP_INVALID_HEIGHT_VALUE;
     float vmapZ = GetHeight(x, y, z, vmap, maxSearchDist);
     float goZ = _dynamicTree.getHeight(x, y, z, maxSearchDist, phases, dCallback);
     if (vmapZ > goZ && dCallback)
@@ -4563,12 +4562,32 @@ bool Map::IsCanScale() const
     switch (i_difficulty)
     {
         case DIFFICULTY_NORMAL:
+		case DIFFICULTY_NORMAL_RAID:
+		case DIFFICULTY_NONE:
+		case DIFFICULTY_HEROIC:
+		case DIFFICULTY_HEROIC_RAID:
+		case DIFFICULTY_MYTHIC_DUNGEON:
+		case DIFFICULTY_MYTHIC_KEYSTONE:
+		case DIFFICULTY_MYTHIC_RAID:
+		case DIFFICULTY_LFR:
+		case DIFFICULTY_LFR_RAID:
+		case DIFFICULTY_10_N:
+		case DIFFICULTY_10_HC:
+		case DIFFICULTY_25_N:
+		case DIFFICULTY_25_HC:
+		case DIFFICULTY_40:
+		case DIFFICULTY_TIMEWALKING:
+		case DIFFICULTY_TIMEWALKING_RAID:
         case DIFFICULTY_HC_SCENARIO:
         case DIFFICULTY_N_SCENARIO:
         case DIFFICULTY_EVENT_DUNGEON:
         case DIFFICULTY_EVENT_SCENARIO:
+		case DIFFICULTY_EVENT_RAID:
+		case DIFFICULTY_PVP:
         case DIFFICULTY_PVEVP_SCENARIO:
         case DIFFICULTY_EVENT_SCENARIO_6:
+		case DIFFICULTY_WORLD_PVP_SCENARIO:
+		case MAX_DIFFICULTY:
         case DIFFICULTY_WORLD_PVP_SCENARIO_2:
             return true;
     }
@@ -4626,7 +4645,7 @@ const WorldLocation* InstanceMap::GetClosestGraveYard(float x, float y, float z)
     WorldLocation const* location = nullptr;
 
     if (i_data) // For use in instance script
-        if (location = i_data->GetClosestGraveYard(x, y, z))
+        if ((location = i_data->GetClosestGraveYard(x, y, z)))
             return location;
 
     float dist = 10000.0f;
@@ -5271,7 +5290,8 @@ void Map::UpdateEncounterState(EncounterCreditType type, uint32 creditEntry, Uni
                     {
                         if (grp->isLFGGroup())
                         {
-                            sLFGMgr->FinishDungeon(grp->GetGUID(), dungeonId);
+							Map* map = player->GetMap();
+                            sLFGMgr->FinishDungeon(grp->GetGUID(), dungeonId, map);
                             break;
                         }
 

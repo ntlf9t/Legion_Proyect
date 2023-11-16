@@ -471,15 +471,8 @@ void MotionMaster::MoveJump(float x, float y, float z, float speedXY, float spee
 
 void MotionMaster::MoveFall(uint32 id/*=0*/)
 {
-    // use larger distance for vmap height search than in most other cases
+    // Use larger distance for vmap height search than in most other cases
     float tz = _owner->GetHeight(_owner->GetPositionX(), _owner->GetPositionY(), _owner->GetPositionZ(), true, MAX_FALL_DISTANCE);
-
-    if (tz <= INVALID_HEIGHT)
-    {
-        // try fall down to ground
-        tz = _owner->GetHeight(_owner->GetPositionX(), _owner->GetPositionY(), _owner->GetPositionZ(), false, MAX_FALL_DISTANCE);
-    }
-
     if (tz <= INVALID_HEIGHT)
     {
         TC_LOG_DEBUG(LOG_FILTER_GENERAL, "MotionMaster::MoveFall: unable retrive a proper height at map %u (x: %f, y: %f, z: %f).",
@@ -491,6 +484,19 @@ void MotionMaster::MoveFall(uint32 id/*=0*/)
     if (fabs(_owner->GetPositionZ() - tz) < 0.1f)
         return;
 
+    // rooted units don't move (also setting falling+root flag causes client freezes)
+    if (_owner->HasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUNNED))
+        return;
+
+    _owner->SetFall(true);
+
+    // Don't run spline movement for players
+    if (_owner->GetTypeId() == TYPEID_PLAYER)
+    {
+        _owner->ToPlayer()->SetFallInformation(0, _owner->GetPositionZ());
+        return;
+    }
+
     if (_owner->IsPlayer())
     {
         _owner->AddUnitMovementFlag(MOVEMENTFLAG_FALLING);
@@ -501,6 +507,7 @@ void MotionMaster::MoveFall(uint32 id/*=0*/)
     Movement::MoveSplineInit init(*_owner);
     init.MoveTo(_owner->GetPositionX(), _owner->GetPositionY(), tz, false);
     init.SetFall();
+
     init.Launch();
     Mutate(new EffectMovementGenerator(id, _owner->GetPositionX(), _owner->GetPositionY(), tz), MOTION_SLOT_CONTROLLED);
 }
@@ -552,6 +559,8 @@ void MotionMaster::MoveSmoothPath(uint32 pointId, G3D::Vector3 const* pathPoints
     Movement::PointsArray path(pathPoints, pathPoints + pathSize);
 
     Movement::MoveSplineInit init(*_owner);
+    if (_owner->CanFly())
+        init.SetUncompressed();
     init.MovebyPath(path);
     init.SetSmooth();
     init.SetWalk(walk);

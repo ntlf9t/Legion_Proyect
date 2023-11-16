@@ -1,4 +1,4 @@
-# Copyright (C) 2008-2016 TrinityCore <http://www.trinitycore.org/>
+# This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
 #
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without
@@ -49,7 +49,6 @@ if (MSVC)
     ${protobuf_STAT_SRCS}
     src/google/protobuf/stubs/atomicops_internals_x86_msvc.cc
   )
-  add_compile_options(/wd4800)
 else()
   set(protobuf_STAT_SRCS
     ${protobuf_STAT_SRCS}
@@ -57,7 +56,7 @@ else()
   )
 endif()
 
-add_library(protobuf STATIC ${protobuf_STAT_SRCS})
+add_library(protobuf ${protobuf_STAT_SRCS})
 
 target_include_directories(protobuf
   PUBLIC
@@ -66,10 +65,44 @@ target_include_directories(protobuf
     ${CMAKE_CURRENT_SOURCE_DIR}/tc_custom)
 
 target_link_libraries(protobuf
+  PRIVATE
+    trinity-default-interface
+    trinity-no-warning-interface
   PUBLIC
     threads)
 
+if (BUILD_SHARED_LIBS)
+  target_compile_definitions(protobuf
+    PRIVATE
+      -DLIBPROTOBUF_EXPORTS
+      -DLIBPROTOC_EXPORTS
+    PUBLIC
+      -DPROTOBUF_USE_DLLS)
+endif()
+
+if (MSVC)
+  target_compile_options(protobuf
+    PRIVATE
+      /wd4996)
+
+  target_compile_definitions(protobuf
+    PRIVATE
+      -D_SCL_SECURE_NO_WARNINGS)
+endif()
+
 set_target_properties(protobuf
-    PROPERTIES
-      FOLDER
-        "dep")
+  PROPERTIES
+    FOLDER
+      "dep")
+
+if (BUILD_SHARED_LIBS)
+  if (UNIX)
+    install(TARGETS protobuf
+      LIBRARY
+        DESTINATION lib)
+  elseif (WIN32)
+    install(TARGETS protobuf
+      RUNTIME
+        DESTINATION "${CMAKE_INSTALL_PREFIX}")
+  endif()
+endif()

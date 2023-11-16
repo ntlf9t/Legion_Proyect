@@ -1,32 +1,7 @@
-/*
-    This file is a part of libcds - Concurrent Data Structures library
-
-    (C) Copyright Maxim Khizhinsky (libcds.dev@gmail.com) 2006-2017
-
-    Source code repo: http://github.com/khizmax/libcds/
-    Download: http://sourceforge.net/projects/libcds/files/
-
-    Redistribution and use in source and binary forms, with or without
-    modification, are permitted provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright notice, this
-      list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above copyright notice,
-      this list of conditions and the following disclaimer in the documentation
-      and/or other materials provided with the distribution.
-
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+// Copyright (c) 2006-2018 Maxim Khizhinsky
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #ifndef CDSLIB_ALGO_ELIMINATION_H
 #define CDSLIB_ALGO_ELIMINATION_H
@@ -51,24 +26,34 @@ namespace cds { namespace algo {
         and all such disjoint collisions can be performed in parallel. If a thread has not met another
         in the selected location or if it met a thread with an operation that cannot be eliminated
         (such as two push operations), an alternative scheme must be used.
+
+        For each thread an struct \p cds::algo::elimination::record stores current elimination record. 
+        TLS-based \p cds::algo::elimination::storage class manages per-thread elimination record.
     */
     namespace elimination {
 
         /// Base class describing an operation for eliminating
         /**
-            This class contains some debugng info.
-            Actual operation descriptor depends on real container and its interface.
+            This class contains some debug info.
+            Actual operation descriptor depends on real container and its interface
+            and must be inherited from \p operation_desc.
         */
         struct operation_desc
         {
-            record * pOwner;    ///< Owner of the descriptor
+            record * pOwner = nullptr;    ///< Owner of the descriptor
         };
 
         /// Acquires elimination record for the current thread
-        template <typename OperationDesc>
+        /**
+            \p OperationDesc must be inherited from \p cds::algo::elimination::operation_desc.
+
+            \p Storage - class managing elimination \p cds::algo::elimination::record, 
+            for example, TLS-based \p cds::algo::elimination::storage.
+        */
+        template <class Storage, typename OperationDesc>
         static inline record * init_record( OperationDesc& op )
         {
-            record& rec = cds::threading::elimination_record();
+            record& rec = Storage::get();
             assert( rec.is_free());
             op.pOwner = &rec;
             rec.pOp = static_cast<operation_desc *>( &op );
@@ -76,9 +61,10 @@ namespace cds { namespace algo {
         }
 
         /// Releases elimination record for the current thread
+        template <class Storage>
         static inline void clear_record()
         {
-            cds::threading::elimination_record().pOp = nullptr;
+            Storage::get().pOp = nullptr;
         }
     } // namespace elimination
 }} // namespace cds::algo

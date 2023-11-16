@@ -53,6 +53,31 @@ enum Spells
     SPELL_DEATH                 = 42566       //not correct spell
 };
 
+Position const FlightPoint[]=
+{
+    {1754.00f, 1346.00f, 17.50f},
+    {1765.00f, 1347.00f, 19.00f},
+    {1784.00f, 1346.80f, 25.40f},
+    {1803.30f, 1347.60f, 33.00f},
+    {1824.00f, 1350.00f, 42.60f},
+    {1838.80f, 1353.20f, 49.80f},
+    {1852.00f, 1357.60f, 55.70f},
+    {1861.30f, 1364.00f, 59.40f},
+    {1866.30f, 1374.80f, 61.70f},
+    {1864.00f, 1387.30f, 63.20f},
+    {1854.80f, 1399.40f, 64.10f},
+    {1844.00f, 1406.90f, 64.10f},
+    {1824.30f, 1411.40f, 63.30f},
+    {1801.00f, 1412.30f, 60.40f},
+    {1782.00f, 1410.10f, 55.50f},
+    {1770.50f, 1405.20f, 50.30f},
+    {1765.20f, 1400.70f, 46.60f},
+    {1761.40f, 1393.40f, 41.70f},
+    {1759.10f, 1386.70f, 36.60f},
+    {1757.80f, 1378.20f, 29.00f},
+    {1758.00f, 1367.00f, 19.51f}
+};
+
 struct mob_wisp_invis : public ScriptedAI
 {
     mob_wisp_invis(Creature* creature) : ScriptedAI(creature)
@@ -348,6 +373,8 @@ struct boss_headless_horseman : public ScriptedAI
 
             headGUID.Clear();
         }
+		
+		me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
     }
 
     void MovementInform(uint32 type, uint32 i) override
@@ -408,7 +435,7 @@ struct boss_headless_horseman : public ScriptedAI
         {
             Player* pPlayer = players.begin()->getSource();
             if (pPlayer && pPlayer->GetGroup())
-                sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 285);
+                sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 285, me->GetMap());
         }
     }
 
@@ -758,30 +785,34 @@ struct mob_pulsing_pumpkin : public ScriptedAI
     }
 };
 
+enum LooselyTurnedSoil
+{
+    QUEST_CALL_THE_HEADLESS_HORSEMAN = 11405
+};
+
 class go_loosely_turned_soil : public GameObjectScript
 {
 public:
     go_loosely_turned_soil() : GameObjectScript("go_loosely_turned_soil") {}
 
-    bool OnGossipHello(Player* player, GameObject* go)
+    bool OnGossipHello(Player* player, GameObject* /*go*/) override
     {
-        if (auto group = player->GetGroup())
-            if (group->isLFGGroup())
+        if (InstanceScript* instance = player->GetInstanceScript())
+            if (instance->GetBossState(DATA_HORSEMAN_EVENT) == IN_PROGRESS || player->GetQuestStatus(QUEST_CALL_THE_HEADLESS_HORSEMAN) != QUEST_STATUS_COMPLETE)
+                return true;
+
+        return false;
+    }
+
+    bool OnQuestReward(Player* player, GameObject* go, Quest const* /*quest*/, uint32 /*opt*/) override
+    {
+        if (InstanceScript* instance = go->GetInstanceScript())
+            if (instance->GetBossState(DATA_HORSEMAN_EVENT) == IN_PROGRESS)
                 return false;
 
-        InstanceScript* instance = player->GetInstanceScript();
-        if (!instance)
-            return true;
-
-        if (instance->GetData(DATA_HORSEMAN_EVENT) != NOT_STARTED || instance->GetGuidData(NPC_HORSEMAN))
-            return true;
-
-        instance->SetData(DATA_HORSEMAN_EVENT, IN_PROGRESS);
         player->AreaExploredOrEventHappens(11405);
-
-        if (auto horseman = go->SummonCreature(HH_MOUNTED, 1089.398f, 612.1663f, -0.7859635f, 0.1787923f, TEMPSUMMON_MANUAL_DESPAWN, 0))
-            horseman->AI()->DoAction(ACTION_2);
-
+        if (Creature* horseman = go->SummonCreature(HH_MOUNTED, FlightPoint[20], TEMPSUMMON_MANUAL_DESPAWN, 0))
+			horseman->AI()->DoAction(ACTION_2);
         return true;
     }
 };

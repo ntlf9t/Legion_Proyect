@@ -52,6 +52,7 @@ void AggressorAI::InitializeAI()
     if (me->m_actionData[CREATURE_ACTION_TYPE_ATTACK] && !me->m_actionData[CREATURE_ACTION_TYPE_ATTACK]->empty())
         m_checkTimer = urand(0, 10000);
 
+
     CreatureAI::InitializeAI();
     DoActionAI(0, CREATURE_ACTION_TYPE_SUMMON);
 }

@@ -131,6 +131,7 @@ public:
             { "quest_poi",                    SEC_ADMINISTRATOR, true,  &HandleReloadQuestPOICommand,                   ""},
             { "quest_start_scripts",          SEC_ADMINISTRATOR, true,  &HandleReloadQuestStartScriptsCommand,          ""},
             { "quest_template",               SEC_ADMINISTRATOR, true,  &HandleReloadQuestTemplateCommand,              ""},
+            { "quest_template_locale",        SEC_ADMINISTRATOR, true,  &HandleReloadQuestTemplateLocaleCommand,        ""},
             { "reference_loot_template",      SEC_ADMINISTRATOR, true,  &HandleReloadLootTemplatesReferenceCommand,     ""},
             { "reserved_name",                SEC_ADMINISTRATOR, true,  &HandleReloadReservedNameCommand,               ""},
             { "reputation_reward_rate",       SEC_ADMINISTRATOR, true,  &HandleReloadReputationRewardRateCommand,       ""},
@@ -587,6 +588,19 @@ public:
         return true;
     }
 
+    static bool HandleReloadQuestTemplateLocaleCommand(ChatHandler* handler, const char* /*args*/)
+    {
+        TC_LOG_INFO(LOG_FILTER_GENERAL, "Re-Loading Quest Template Locales...");
+        sQuestDataStore->LoadQuests();
+        handler->SendGlobalGMSysMessage("DB table `quest_template_locale` (quest definitions) reloaded.");
+
+        /// dependent also from `gameobject` but this table not reloaded anyway
+        TC_LOG_INFO(LOG_FILTER_GENERAL, "Re-Loading GameObjects for quests...");
+        sQuestDataStore->LoadGameObjectForQuests();
+        handler->SendGlobalGMSysMessage("Data GameObjects for quests reloaded.");
+        return true;
+    }
+
     static bool HandleReloadLootTemplatesCreatureCommand(ChatHandler* handler, const char* /*args*/)
     {
         TC_LOG_INFO(LOG_FILTER_GENERAL, "Re-Loading Loot Tables... (`creature_loot_template`)");
@@ -905,7 +919,7 @@ public:
     static bool HandleReloadSpellProcsCommand(ChatHandler* handler, const char* /*args*/)
     {
         TC_LOG_INFO(LOG_FILTER_GENERAL, "Re-Loading Spell Proc conditions and data...");
-        sSpellMgr->LoadSpellProcs();
+       // sSpellMgr->LoadSpellProcs();
         handler->SendGlobalGMSysMessage("DB table `spell_proc` (spell proc conditions and data) reloaded.");
         return true;
     }

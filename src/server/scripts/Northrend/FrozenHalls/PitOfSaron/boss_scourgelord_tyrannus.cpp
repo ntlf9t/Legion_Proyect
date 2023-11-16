@@ -290,7 +290,7 @@ class boss_tyrannus : public CreatureScript
                         Player* pPlayer = players.begin()->getSource();
                         if (pPlayer && pPlayer->GetGroup())
                             if (sLFGMgr->GetQueueId(995))
-                                sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 995);
+                                sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 995, me->GetMap());
                     }
                 }
 

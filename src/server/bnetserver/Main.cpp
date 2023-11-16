@@ -32,6 +32,7 @@
 #include <iostream>
 #include <openssl/crypto.h>
 
+#include "DatabaseLoader.h"
 #include "AppenderDB.h"
 #include "Common.h"
 #include "DatabaseEnv.h"
@@ -76,7 +77,7 @@ void KeepDatabaseAliveHandler(boost::system::error_code const& error);
 void BanExpiryHandler(boost::system::error_code const& error);
 variables_map GetConsoleArguments(int argc, char** argv, std::string& configFile, std::string& configService);
 
-boost::asio::io_service _ioService;
+boost::asio::io_context _ioService;
 static boost::asio::deadline_timer* _dbPingTimer;
 static uint32 _dbPingInterval;
 static boost::asio::deadline_timer* _banExpiryCheckTimer;
@@ -165,7 +166,7 @@ int main(int argc, char** argv)
         numThreads = 1;
 
     for (int i = 0; i < numThreads; ++i)
-        threadPool.emplace_back(boost::bind(&boost::asio::io_service::run, &_ioService));
+        threadPool.emplace_back(boost::bind(&boost::asio::io_context::run, &_ioService));
 
     // Initialize the database connection
     if (!StartDB())
@@ -225,7 +226,7 @@ int main(int argc, char** argv)
     _banExpiryCheckTimer->expires_from_now(boost::posix_time::seconds(_banExpiryCheckInterval));
     _banExpiryCheckTimer->async_wait(BanExpiryHandler);
 
-    TC_LOG_INFO(LOG_FILTER_BATTLENET, "%s (bnetserver-daemon) ready...", GitRevision::GetFullVersion());
+    TC_LOG_INFO(LOG_FILTER_BATTLENET, "Battlenet::Initialized");
 
 #if PLATFORM == PLATFORM_WINDOWS
     if (m_ServiceStatus != -1)
@@ -272,29 +273,12 @@ bool StartDB()
 {
     MySQL::Library_Init();
 
-    std::string dbstring = sConfigMgr->GetStringDefault("LoginDatabaseInfo", "");
-    if (dbstring.empty())
-    {
-        TC_LOG_ERROR(LOG_FILTER_BATTLENET, "Database not specified");
-        return false;
-    }
+	DatabaseLoader loader("server.bnetserver", DatabaseLoader::DATABASE_NONE);
+	loader
+		.AddDatabase(LoginDatabase, "Login");
 
-    int32 worker_threads = sConfigMgr->GetIntDefault("LoginDatabase.WorkerThreads", 1);
-    if (worker_threads < 1 || worker_threads > 32)
-    {
-        TC_LOG_ERROR(LOG_FILTER_BATTLENET, "Improper value specified for LoginDatabase.WorkerThreads, defaulting to 1.");
-        worker_threads = 1;
-    }
-
-    int32 synch_threads = sConfigMgr->GetIntDefault("LoginDatabase.SynchThreads", 1);
-    if (synch_threads < 1 || synch_threads > 32)
-    {
-        TC_LOG_ERROR(LOG_FILTER_BATTLENET, "Improper value specified for LoginDatabase.SynchThreads, defaulting to 1.");
-        synch_threads = 1;
-    }
-
-    if (!LoginDatabase.Open(dbstring, uint8(worker_threads), uint8(synch_threads)))
-        return false;
+	if (!loader.Load())
+		return false;
 
     TC_LOG_INFO(LOG_FILTER_BATTLENET, "Started auth database connection pool.");
     sLog->SetRealmID(0); // Enables DB appenders when realm is set.

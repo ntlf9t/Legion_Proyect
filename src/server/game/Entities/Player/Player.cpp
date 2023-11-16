@@ -47,6 +47,7 @@
 #include "CombatPackets.h"
 #include "Common.h"
 #include "ConditionMgr.h"
+#include "Config.h"
 #include "CreatureAI.h"
 #include "DatabaseEnv.h"
 #include "DB2Stores.h"
@@ -209,6 +210,8 @@ m_achievementMgr(sf::safe_ptr<AchievementMgr<Player>>(this))
     m_updateCRsMask = 0;
     m_duelLock = false;
 
+    m_combatExitTime = 0;
+
     m_zoneId = 0;
     m_zoneUpdateTimer = 0;
     m_zoneUpdateAllow = false;
@@ -264,6 +267,7 @@ m_achievementMgr(sf::safe_ptr<AchievementMgr<Player>>(this))
     m_MirrorTimerFlags = UNDERWATER_NONE;
     m_MirrorTimerFlagsLast = UNDERWATER_NONE;
     m_isInWater = false;
+	m_hostileReferenceCheckTimer = 0;
     m_drunkTimer = 0;
     m_restTime = 0;
     m_deathTimer = 0;
@@ -278,6 +282,10 @@ m_achievementMgr(sf::safe_ptr<AchievementMgr<Player>>(this))
         m_bgBattlegroundQueueID[j].invitedToInstance = 0;
         m_bgBattlegroundQueueID[j].joinTime = 0;
     }
+	// PlayedTimeReward
+    ptr_Interval = sConfigMgr->GetIntDefault("PlayedTimeReward.Interval", 0);
+    ptr_Money = sConfigMgr->GetIntDefault("PlayedTimeReward.Money", 0);
+	ptr_Item = sConfigMgr->GetIntDefault("PlayedTimeReward.Item", 0);
 
     m_createdtime = time(NULL);
     m_logintime = time(NULL);
@@ -406,7 +414,7 @@ m_achievementMgr(sf::safe_ptr<AchievementMgr<Player>>(this))
     m_clientCheckDelay = 15000;
     m_clientKickDelay = 0;
 
-    memset(_voidStorageItems, NULL, sizeof(_voidStorageItems));
+    memset(_voidStorageItems, 0, sizeof(_voidStorageItems));
 
     m_PetSlots.resize(PET_SLOT_LAST, 0);
     realmTransferid = 0;
@@ -1525,6 +1533,20 @@ void Player::Update(uint32 p_time)
             if (charmer->IsCreature() && charmer->isAlive())
                 UpdateCharmedAI();
 
+	// PlayedTimeReward
+    if (ptr_Interval > 0)
+    {
+        if (ptr_Interval <= p_time)
+        {
+            ChatHandler(GetSession()).PSendSysMessage(LANG_PLAYED_TIME_REWARD_MESSAGE);
+            ModifyMoney(ptr_Money);
+			AddItem(ptr_Item, 1, 0);
+            ptr_Interval = sConfigMgr->GetIntDefault("PlayedTimeReward.Interval", 0);
+        }
+        else
+            ptr_Interval -= p_time;
+    }
+
     if (!m_timedquests.empty())
     {
         QuestSet::iterator iter = m_timedquests.begin();
@@ -1655,24 +1677,6 @@ void Player::Update(uint32 p_time)
 
             uint32 newzone, newarea;
             GetZoneAndAreaId(newzone, newarea);
-
-            //! HardCore. Alliance
-            if (newzone == 6719 && !m_taxi.GetTaxiSource())
-            {
-                if (Garrison* garr = GetGarrisonPtr())
-                {
-                    if (garr->GetGarrisonMapID() != -1)
-                    {
-                        Map* newMap = sMapMgr->CreateMap(garr->GetGarrisonMapID(), this);
-                        if (newMap && newMap->CanEnter(this))
-                        {
-                            uint32 const garArea = newMap->GetAreaId(GetPositionX(), GetPositionY(), GetPositionZ());
-                            if (m_areaId != garArea)
-                                newarea = garArea;
-                        }
-                    }
-                }
-            }
 
             if (m_zoneId != newzone)
                 UpdateZone(newzone, newarea);                // also update area
@@ -1895,6 +1899,17 @@ void Player::Update(uint32 p_time)
         if (!GetTransport() || GetTransport() != pet->GetTransport()) // waiting full teleport player
             UnsummonPetTemporaryIfAny();
     
+    if (isAlive())
+    {
+        if (m_hostileReferenceCheckTimer <= p_time)
+        {
+            m_hostileReferenceCheckTimer = 15 * IN_MILLISECONDS;
+            if (!GetMap()->IsDungeon())
+                getHostileRefManager().deleteReferencesOutOfRange(GetVisibilityRange());
+        }
+        else
+            m_hostileReferenceCheckTimer -= p_time;
+    }
 
     //we should execute delayed teleports only for alive(!) players
     //because we don't want player's ghost teleported from graveyard
@@ -7204,7 +7219,7 @@ void Player::KillPlayer()
             SendMovementForce(at);
 
     if (IsFlying() && !GetTransport())
-        i_motionMaster.MoveFall();
+        GetMotionMaster()->MoveFall();
 
     SetRooted(true);
 
@@ -8737,11 +8752,11 @@ void Player::SendCinematicStart(uint32 CinematicSequenceId)
     SendDirectMessage(packet.Write());
 }
 
-void Player::SendMovieStart(uint32 MovieId)
+void Player::SendMovieStart(uint32 movieId)
 {
-    SetMovie(MovieId);
+    SetMovie(movieId);
     WorldPackets::Misc::TriggerMovie packet;
-    packet.MovieID = MovieId;
+    packet.MovieID = movieId;
     SendDirectMessage(packet.Write());
 
     // used for chacking plr state.
@@ -19625,6 +19640,10 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
         m_RewardedQuests.insert(quest_id);
         m_accuntQuests.insert(quest_id);
         m_RewardedQuestsSave[quest_id] = QUEST_DEFAULT_SAVE_TYPE;
+
+
+    if (uint32 questBit = sDB2Manager.GetQuestUniqueBitFlag(quest_id))
+        SetQuestCompletedBit(questBit, true);
     }
     
     // Must come after the insert in m_RewardedQuests because of spell_area check
@@ -20685,7 +20704,7 @@ void Player::KilledMonsterCredit(uint32 entry, ObjectGuid guid /*= ObjectGuid::E
     Creature* killed = NULL;
     if (!guid.IsEmpty())
     {
-        if (killed = GetMap()->GetCreature(guid))
+        if ((killed = GetMap()->GetCreature(guid)))
         {
             if (killed->GetEntry())
                 real_entry = killed->GetEntry();
@@ -23185,7 +23204,7 @@ void Player::_LoadInventory(PreparedQueryResult result, PreparedQueryResult arti
         {
             if (Item* parent = GetItemByGuid(childItem->GetGuidValue(ITEM_FIELD_CREATOR)))
             {
-                InventoryResult res = CanUseItem(parent , false );
+                InventoryResult res = CanUseItem(parent, false);
                 if (res == EQUIP_ERR_OK)
                 {
                     parent->SetChildItem(childItem->GetGUID());
@@ -30496,7 +30515,7 @@ void Player::learnSkillRewardedSpells(uint32 skillId, uint32 skillValue)
         // AcquireMethod == 2 && NumSkillUps == 1 --> automatically learn riding skill spell, else we skip it (client shows riding in spellbook as trainable).
         if (skillId == SKILL_RIDING && (ability->AcquireMethod != SKILL_LINE_ABILITY_LEARNED_ON_SKILL_LEARN || ability->NumSkillUps != 1))
             continue;
-
+		
         if (ability->AcquireMethod == SKILL_LINE_ABILITY_NOT_AUTO_LEARN)
         {
             //First Aid in Draenor don't learning misc spells
@@ -31029,7 +31048,7 @@ void Player::UpdateForQuestWorldObjects()
                     if (garr->GetCountOfBluePrints())
                         buildUpdateBlock = true;
             }
-            if (!buildUpdateBlock && obj->HasFlag(UNIT_FIELD_NPC_FLAGS2, UNIT_NPC_FLAG2_GARRISON_MISSION_NPC | UNIT_NPC_FLAG2_SHIPMENT_CRAFTER))
+            if (!buildUpdateBlock && obj->HasFlag(UNIT_FIELD_NPC_FLAGS2, UNIT_NPC_FLAG2_GARRISON_MISSION_NPC))
             {
                 if (Garrison* garr = GetGarrisonPtr())
                     if (garr->GetCountOFollowers())
@@ -32683,6 +32702,13 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
         return;
     }
 
+    // dont allow protected item to be looted by someone else
+    if (!item->rollWinnerGUID.IsEmpty() && item->rollWinnerGUID != GetGUID())
+    {
+        SendLootRelease(GetLootGUID());
+        return;
+    }
+
     if (loot->shipmentBuildingType)
     {
         if (Garrison* garr = GetGarrisonPtr())
@@ -33121,6 +33147,12 @@ void Player::UpdateAchievementCriteria(CriteriaTypes type, uint32 miscValue1 /*=
             case CRITERIA_TYPE_WIN_BATTLEGROUND:
                 m_killPoints += 1.0f;
                 break;
+			case CRITERIA_TYPE_COMPLETE_ARCHAEOLOGY_PROJECTS:
+			case CRITERIA_TYPE_ARCHAEOLOGY_SITE_COMPLETE:
+			case CRITERIA_TYPE_ARCHAEOLOGY_GAMEOBJECT:
+			case CRITERIA_TYPE_REACH_LEVEL:
+			case CRITERIA_TYPE_REACH_SKILL_LEVEL:
+			case CRITERIA_TYPE_COMPLETE_ACHIEVEMENT:
             case CRITERIA_TYPE_COMPLETE_DUNGEON_ENCOUNTER:
             {
                 float addKillPoints = 0.0f;
@@ -36536,7 +36568,7 @@ void Player::CastSpellInQueue()
 }
 
 void Player::SendSpellScene(uint32 miscValue, SpellInfo const* /*spellInfo*/, bool apply, Position* pos)
-{    
+{
     SpellScene const* spellScene = sSpellMgr->GetSpellScene(miscValue);
     if (!spellScene)
         return;
@@ -36564,6 +36596,12 @@ void Player::SendSpellScene(uint32 miscValue, SpellInfo const* /*spellInfo*/, bo
 
         if (!ID)    //as we have sctipt with finishing scene it now could be 0.
             return;
+
+        //TODO: this is a hack to "properly" reload the phase when completing the Keystone quest + scene
+        // this should probably always be happening, but this I'd rather not break anything
+        if (miscValue == 1142)
+            SceneCompleted(ID);
+
 
         SendDirectMessage(WorldPackets::Scene::CancelScene(ID).Write());
     }
@@ -36705,6 +36743,12 @@ bool Player::HasInstantCastModForSpell(SpellInfo const* spellInfo)
                 return true;
 
     return false;
+}
+
+void Player::OnCombatExit()
+{
+    UpdatePotionCooldown();
+    m_combatExitTime = getMSTime();
 }
 
 void Player::CreateGarrison(uint32 garrSiteId, bool skip /* = false*/)
@@ -37076,7 +37120,7 @@ void Player::UnLockThirdSocketIfNeed(Item* item)
         if (bonusListID == bonusID)
             return;
 
-    if (unlock = sDB2Manager.GetArtifactUnlock(item->GetTemplate()->GetArtifactID()))
+    if ((unlock = sDB2Manager.GetArtifactUnlock(item->GetTemplate()->GetArtifactID())))
         if (sConditionMgr->IsPlayerMeetingCondition(this, unlock->PlayerConditionID))
             item->AddBonuses(bonusID);
 }
@@ -37165,6 +37209,15 @@ bool Player::InFFAPvPArea()
 void Player::UpdatePlayerNameData()
 {
     sWorld->UpdateCharacterNameDataZoneGuild(GetGUID().GetCounter(), m_zoneId, GetGuildId(), GetRank());
+}
+
+uint16 Player::getAdventureQuestID()
+{
+    // if not 0 check if the adventure quest is still in the quest journal, otherwise return 0
+    if (m_adventure_questID && GetQuestStatus(m_adventure_questID) != QUEST_STATUS_REWARDED && GetQuestStatus(m_adventure_questID) != QUEST_STATUS_NONE)
+        return m_adventure_questID;
+
+    return 0;
 }
 
 void Player::setAdventureQuestID(uint16 questID)
@@ -37454,7 +37507,7 @@ void Player::ClearClient()
     i_clientGUIDLock.unlock();
 }
 
-bool Player::HaveAtClient(WorldObject const* u)
+bool Player::HaveAtClient(WorldObject const* u) const
 {
     if (u == this)
         return true;

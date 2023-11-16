@@ -111,14 +111,16 @@ void PlayerTaxi::LoadTaxiMask(std::string const &data)
 
 bool PlayerTaxi::IsTaximaskNodeKnown(uint32 nodeidx) const
 {
-    uint16 field = uint16((nodeidx - 1) / 8);
+    //uint16 field = uint16((nodeidx - 1) / 8);
+	uint32 field   = uint32((nodeidx - 1) / 8);
     uint32 submask = 1 << ((nodeidx - 1) % 8);
     return (m_taximask[field] & submask) == submask;
 }
 
 bool PlayerTaxi::SetTaximaskNode(uint32 nodeidx)
 {
-    uint16 field = uint16((nodeidx - 1) / 8);
+    //uint16 field = uint16((nodeidx - 1) / 8);
+	uint32 field   = uint32((nodeidx - 1) / 8);
     uint32 submask = 1 << ((nodeidx - 1) % 8);
     if ((m_taximask[field] & submask) != submask)
     {

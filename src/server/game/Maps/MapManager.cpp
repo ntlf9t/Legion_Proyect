@@ -120,18 +120,8 @@ Map* MapManager::FindMap(uint32 mapid, uint32 instanceId) const
         return nullptr;
 
     if (map->Instanceable() || map->CanCreatedZone())
-    {
-        if (!map->IsGarrison())
-        {
-            if (auto map_ = static_cast<MapInstanced*>(map)->FindInstanceMap(instanceId))
-                return map_;
-        }
-        else
-        {
-            if (auto map_ = static_cast<MapInstanced*>(map)->FindGarrisonMap(instanceId))
-                return map_;
-        }
-    }
+        if (auto map_ = static_cast<MapInstanced*>(map)->FindInstanceMap(instanceId))
+            return map_;
 
     if (!map->Instanceable()) // return base map else for "starting"
         instanceId = 0;
@@ -539,22 +529,22 @@ void MapManager::LogInfoAllMaps()
 
 void MapManager::SetUnloadGarrison(uint32 lowGuid)
 {
-    if (Map* map = FindMap(1152, lowGuid))
+    if (Map* map = FindMap(1152, lowGuid | 1 << 0x1E))
         if (InstanceMap* instance = map->ToInstanceMap())
             instance->Reset(INSTANCE_RESET_GLOBAL);
-    if (Map* map = FindMap(1153, lowGuid))
+    if (Map* map = FindMap(1153, lowGuid | 1 << 0x1E))
         if (InstanceMap* instance = map->ToInstanceMap())
             instance->Reset(INSTANCE_RESET_GLOBAL);
-    if (Map* map = FindMap(1154, lowGuid))
+    if (Map* map = FindMap(1154, lowGuid | 1 << 0x1E))
         if (InstanceMap* instance = map->ToInstanceMap())
             instance->Reset(INSTANCE_RESET_GLOBAL);
-    if (Map* map = FindMap(1158, lowGuid))
+    if (Map* map = FindMap(1158, lowGuid | 1 << 0x1E))
         if (InstanceMap* instance = map->ToInstanceMap())
             instance->Reset(INSTANCE_RESET_GLOBAL);
-    if (Map* map = FindMap(1159, lowGuid))
+    if (Map* map = FindMap(1159, lowGuid | 1 << 0x1E))
         if (InstanceMap* instance = map->ToInstanceMap())
             instance->Reset(INSTANCE_RESET_GLOBAL);
-    if (Map* map = FindMap(1160, lowGuid))
+    if (Map* map = FindMap(1160, lowGuid | 1 << 0x1E))
         if (InstanceMap* instance = map->ToInstanceMap())
             instance->Reset(INSTANCE_RESET_GLOBAL);
 }

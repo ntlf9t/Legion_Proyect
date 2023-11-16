@@ -72,9 +72,35 @@ void WorldPackets::Null::Read()
     _worldPacket.rfinish();
 }
 
-WorldSession::WorldSession(uint32 id, std::string&& name, uint32 battlenetAccountId, const std::shared_ptr<WorldSocket>& sock, AccountTypes sec, uint8 expansion, time_t mute_time, std::string os, LocaleConstant locale, uint32 recruiter, bool isARecruiter, AuthFlags flag):
-m_muteTime(mute_time), m_timeOutTime(0), _countPenaltiesHwid(0), _player(nullptr), m_map(nullptr), _security(sec), _accountId(id), _battlenetAccountId(battlenetAccountId), m_expansion(expansion), m_accountExpansion(expansion), _logoutTime(0), m_inQueue(false), m_playerLogout(false), m_playerRecentlyLogout(false),
-m_playerSave(false), m_sessionDbLocaleIndex(locale), m_latency(0), _tutorialsChanged(false), recruiterId(recruiter), isRecruiter(isARecruiter), timeCharEnumOpcode(0), playerLoginCounter(0), forceExit(false), m_sUpdate(false), wardenModuleFailed(false), atAuthFlag(flag), canLogout(false)
+WorldSession::WorldSession(uint32 id, std::string&& name, uint32 battlenetAccountId, const std::shared_ptr<WorldSocket>& sock, AccountTypes sec, uint8 expansion, time_t mute_time, 
+   std::string os, LocaleConstant locale, uint32 recruiter, bool isARecruiter, AuthFlags flag):
+   m_muteTime(mute_time),
+   m_timeOutTime(0),
+   _countPenaltiesHwid(0),
+   _player(nullptr),
+   m_map(nullptr),
+   _security(sec),
+   _accountId(id),
+   _battlenetAccountId(battlenetAccountId),
+   m_expansion(expansion),
+   m_accountExpansion(expansion),
+   _logoutTime(0),
+   m_inQueue(false),
+   m_playerLogout(false),
+   m_playerRecentlyLogout(false),
+   m_playerSave(false),
+   m_sessionDbLocaleIndex(locale),
+   m_latency(0),
+   _tutorialsChanged(false),
+   recruiterId(recruiter),
+   isRecruiter(isARecruiter),
+   timeCharEnumOpcode(0),
+   playerLoginCounter(0),
+   forceExit(false),
+   m_sUpdate(false),
+   wardenModuleFailed(false),
+   atAuthFlag(flag),
+   canLogout(false)
 {
     _os = std::move(os);
     _accountName = std::move(name);
@@ -143,6 +169,27 @@ WorldSession::~WorldSession()
 
     LoginDatabase.PExecute("UPDATE account SET online = 0 WHERE id = %u;", GetAccountId());     // One-time query
     sWorld->DecreaseSessionCount();
+}
+
+bool WorldSession::PlayerDisconnected() const
+{
+    return !(m_Socket[CONNECTION_TYPE_REALM] && m_Socket[CONNECTION_TYPE_REALM]->IsOpen() &&
+             m_Socket[CONNECTION_TYPE_INSTANCE] && m_Socket[CONNECTION_TYPE_INSTANCE]->IsOpen());
+}
+
+std::string WorldSession::GetPlayerInfo() const
+{
+    std::ostringstream ss;
+
+    ss << "[Player: ";
+    if (!m_playerLoading.IsEmpty())
+        ss << "Logging in: " << m_playerLoading.ToString() << ", ";
+    else if (_player)
+        ss << _player->GetName() << ' ' << _player->GetGUID().ToString() << ", ";
+
+    ss << "Account: " << GetAccountId() << "]";
+
+    return ss.str();
 }
 
 /// Get the player name
@@ -691,6 +738,10 @@ void WorldSession::LogoutPlayer(bool Save)
         // a) in group; b) not in raid group; c) logging out normally (not being kicked or disconnected)
         //if (_player->GetGroup() && !_player->GetGroup()->isRaidGroup() && m_Socket[CONNECTION_TYPE_REALM])
         //    _player->RemoveFromGroup();
+        //if (_player->GetGroup() && !_player->GetGroup()->isRaidGroup() && !_player->GetGroup()->isLFGGroup() && m_Socket[CONNECTION_TYPE_REALM]->IsOpen())
+        //    _player->RemoveFromGroup();
+        //else if (_player->GetGroup() && _player->GetGroup()->isLFGGroup() && m_Socket[CONNECTION_TYPE_REALM]->IsOpen())
+        //    _player->RemoveFromGroup(_player->GetGroup(), _player->GetGUID(), GROUP_REMOVEMETHOD_LEAVE, ObjectGuid::Empty, nullptr);
 
         //! Send update to group and reset stored max enchanting level
         if (_player->GetGroup())
@@ -797,6 +848,11 @@ void WorldSession::SendNotification(uint32 string_id, ...)
 const char* WorldSession::GetTrinityString(int32 entry) const
 {
     return sObjectMgr->GetTrinityString(entry, GetSessionDbLocaleIndex());
+}
+
+void WorldSession::ResetTimeOutTime()
+{
+    m_timeOutTime = int32(sWorld->getIntConfig(CONFIG_SOCKET_TIMEOUTTIME));
 }
 
 void WorldSession::Handle_NULL(WorldPackets::Null& null)

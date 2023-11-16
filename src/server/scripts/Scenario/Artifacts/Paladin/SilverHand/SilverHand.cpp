@@ -928,6 +928,7 @@ public:
                 return;
 
             if (startCriteria)
+			{
                 if (timer <= diff)
                 {
                     if (Player* pl = me->FindNearestPlayer(100.0f))
@@ -936,6 +937,7 @@ public:
                 }
                 else
                     timer -= diff;
+			}
         }
 
         void SummonAdds(uint8 wave)

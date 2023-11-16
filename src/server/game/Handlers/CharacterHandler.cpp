@@ -805,31 +805,43 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
         {
             player->setCinematic(1);
 
-            if (!sWorld->getBoolConfig(CONFIG_FUN_OPTION_ENABLED))
+            if (ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(player->getClass()))
             {
-                if (ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(player->getClass()))
+                if (!sWorld->getBoolConfig(CONFIG_FUN_OPTION_ENABLED) && player->getClass() == CLASS_DEMON_HUNTER) /// @todo: find a more generic solution
+                    player->SendMovieStart(469);
+                else if (cEntry->CinematicSequenceID)
+                    player->SendCinematicStart(cEntry->CinematicSequenceID);
+                else if (ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(player->getRace()))
                 {
-                    Position pos;
-                    player->GetPosition(&pos);
-                    if (player->getRace() == RACE_NIGHTBORNE)
-                        player->SendSpellScene(1900, nullptr, true, &pos);
-                    else if (player->getRace() == RACE_HIGHMOUNTAIN_TAUREN)
-                        player->SendSpellScene(1901, nullptr, true, &pos);
-                    else if (player->getRace() == RACE_VOID_ELF)
-                        player->SendSpellScene(1903, nullptr, true, &pos);
-                    else if (player->getRace() == RACE_LIGHTFORGED_DRAENEI)
-                        player->SendSpellScene(1902, nullptr, true, &pos);
-                    else if (player->getClass() == CLASS_DEMON_HUNTER) /// @todo: find a more generic solution
-                        player->SendMovieStart(469);
-                    else if (cEntry->CinematicSequenceID)
-                        player->SendCinematicStart(cEntry->CinematicSequenceID);
-                    else if (ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(player->getRace()))
+                    if (rEntry->CinematicSequenceID)
                         player->SendCinematicStart(rEntry->CinematicSequenceID);
-
-                    // send new char string if not empty
-                    if (!sWorld->GetNewCharString().empty())
-                        chatHandler.PSendSysMessage("%s", sWorld->GetNewCharString().c_str());
+                    else
+                    {
+                        Position pos;
+                        player->GetPosition(&pos);
+                        switch (player->getRace())
+                        {
+                          case RACE_HIGHMOUNTAIN_TAUREN:
+                                player->SendSpellScene(1901, nullptr, true, &pos);
+                                break;
+                            case RACE_NIGHTBORNE:
+                                player->SendSpellScene(1900, nullptr, true, &pos);
+                                break;
+                            case RACE_LIGHTFORGED_DRAENEI:
+                                player->SendSpellScene(1902, nullptr, true, &pos);
+                                break;
+                            case RACE_VOID_ELF:
+                                player->SendSpellScene(1903, nullptr, true, &pos);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
                 }
+
+                // send new char string if not empty
+                if (!sWorld->GetNewCharString().empty())
+                    chatHandler.PSendSysMessage("%s", sWorld->GetNewCharString().c_str());
             }
         }
 
@@ -1317,7 +1329,7 @@ void WorldSession::HandleCharCustomizeCallback(std::shared_ptr<WorldPackets::Cha
 
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_NAME);
     stmt->setUInt64(0, lowGuid);
-    if (result = CharacterDatabase.Query(stmt))
+    if ((result = CharacterDatabase.Query(stmt)))
         TC_LOG_INFO(LOG_FILTER_CHARACTER, "Account: %d (IP: %s), Character[%s] (guid:%u) Customized to: %s", GetAccountId(), GetRemoteAddress().c_str(), result->Fetch()[0].GetString().c_str(), lowGuid, customizeInfo->CharName.c_str());
 
     SQLTransaction trans = CharacterDatabase.BeginTransaction();
@@ -1656,7 +1668,7 @@ void WorldSession::HandleCharRaceOrFactionChange(WorldPackets::Character::CharRa
             // Reset guild
             stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GUILD_MEMBER);
             stmt->setUInt64(0, lowGuid);
-            if (result = CharacterDatabase.Query(stmt))
+            if ((result = CharacterDatabase.Query(stmt)))
                 if (Guild* guild = sGuildMgr->GetGuildById((result->Fetch()[0]).GetUInt64()))
                     guild->DeleteMember(ObjectGuid::Create<HighGuid::Player>(lowGuid));
         }

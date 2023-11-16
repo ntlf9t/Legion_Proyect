@@ -769,18 +769,18 @@ public:
            SetCombatMovement(false);
         }
         
-          void UpdateAI(uint32 diff) override
-          {
+        void UpdateAI(uint32 diff) override
+        {
             if (Unit* target = me->FindNearestPlayer(100.0f))
             {
-               if (me->IsWithinMeleeRange(target))
-               {
-                  DoCast(204498);
-                  me->RemoveAreaObject(204465);
-                  me->DespawnOrUnsummon(1);
-               }
+                if (me->IsWithinMeleeRange(target))
+                {
+                    me->RemoveAreaObject(204465);
+                    me->DespawnOrUnsummon(1);
+					DoCast(204498);
+                }
             }
-          }
+        }
     };
 
     CreatureAI* GetAI(Creature* creature) const override

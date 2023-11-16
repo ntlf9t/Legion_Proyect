@@ -255,11 +255,15 @@ bool TargetedMovementGeneratorMedium<T,D>::DoUpdate(T &owner, const uint32 & tim
         }
         else
         {
-            if (owner.IsCreature() && ((Creature*)&owner)->IsFlying())
+            if (owner.IsCreature() && ((Creature*)&owner)->IsFlying() || ((Creature*)&owner)->CanSwim())
                 targetMoved = !i_target->IsWithinDist3d(dest.x, dest.y, dest.z, allowed_dist);
             else
                 targetMoved = !i_target->IsWithinDist2d(dest.x, dest.y, allowed_dist);
         }
+		
+        // then, if the target is in range, check also Line of Sight.
+        if (!targetMoved)
+            targetMoved = !i_target->IsWithinLOSInMap(&owner);
 
         if (targetIsVictim && owner.IsCreature() && !((Creature*)&owner)->isPet())
         {

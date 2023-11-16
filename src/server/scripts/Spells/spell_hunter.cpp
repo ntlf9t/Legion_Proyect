@@ -530,7 +530,8 @@ class spell_hun_tame_beast : public SpellScriptLoader
 
                 if (Creature* target = GetExplTargetUnit()->ToCreature())
                 {
-                    if (target->getLevel() > caster->getLevel())
+                    TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "== target level %u, caster level %u", target->getLevelForTarget(caster), caster->getLevel());
+                    if (target->getLevelForTarget(caster) > caster->getLevel())
                         return SPELL_FAILED_HIGHLEVEL;
 
                     if (!target->GetCreatureTemplate()->isTameable(caster->ToPlayer()))
@@ -931,7 +932,7 @@ class areatrigger_at_steel_trap : public AreaTriggerScript
             }
         }
 
-        uint32 CallSpecialFunction(uint32 /*Num*/)
+        uint32 CallSpecialFunction(uint32 /*Num*/) override
         {
             return triggerTimer;
         }

@@ -39,7 +39,7 @@ public:
 
     static LoginRESTService& Instance();
 
-    bool Start(boost::asio::io_service& ioService);
+    bool Start(boost::asio::io_context& ioService);
     void Stop();
 
     boost::asio::ip::tcp::endpoint const& GetAddressForClient(boost::asio::ip::address const& address) const;
@@ -106,6 +106,7 @@ private:
     int32 _waitTime;
     boost::asio::ip::tcp::endpoint _externalAddress;
     boost::asio::ip::tcp::endpoint _localAddress;
+	boost::asio::ip::address_v4 _localNetmask;
     std::mutex _loginTicketMutex;
     std::unordered_map<std::string, LoginTicket> _validLoginTickets;
     boost::asio::deadline_timer* _loginTicketCleanupTimer;

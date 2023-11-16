@@ -1073,6 +1073,30 @@ public:
     }
 };
 
+class player_quest_42787 : public PlayerScript
+{
+    public:
+    player_quest_42787() : PlayerScript("player_quest_42787") {}
+
+    void OnUpdate(Player* player, uint32 diff) override
+    {
+
+        if (player->GetQuestStatus(42787) == QUEST_STATUS_INCOMPLETE)
+        {
+        
+            if (Creature* creature = player->FindNearestCreature(97543, 40.0f, true))
+            {
+                if (!creature->HasAura(197784))
+                {
+                    player->SummonCreature(100495, 5023.47f, -3843.12f, 736.924f, 3.2582f, TEMPSUMMON_DEAD_DESPAWN, 60000);
+                }
+
+            }
+        }
+
+    }
+};
+
 void AddSC_player_special_scripts()
 {
     new playerScriptPvpMisc();
@@ -1092,4 +1116,5 @@ void AddSC_player_special_scripts()
     new player_chineese_event();
     new player_clear_timed_titles();
     new player_invisible_status_mod_map_handler();
+	new player_quest_42787();
 };

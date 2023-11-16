@@ -48,7 +48,7 @@ class boss_coren_direbrew : public CreatureScript
                     {
                         if (Group* group = players.begin()->getSource()->GetGroup())
                         if (group->isLFGGroup())
-                            sLFGMgr->FinishDungeon(group->GetGUID(), dungeon->ID);
+                            sLFGMgr->FinishDungeon(group->GetGUID(), dungeon->ID, me->GetMap());
                     }
                 }
             }

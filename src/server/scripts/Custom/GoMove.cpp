@@ -45,7 +45,7 @@ void GOMove::SendAdd(Player * player, GameObject* go)
 void GOMove::SendRemove(Player * player, ObjectGuid::LowType lowguid)
 {
     char msg[256];
-    snprintf(msg, 256, "REMOVE|%llu||0", lowguid);
+    snprintf(msg, 256, "REMOVE|%lu||0", lowguid);
 
     SendAddonMessage(player, msg);
 }

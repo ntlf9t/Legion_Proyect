@@ -268,7 +268,7 @@ public:
                     Player* pPlayer = players.begin()->getSource();
                     if (pPlayer && pPlayer->GetGroup())
                         if (sLFGMgr->GetQueueId(744))
-                            sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 744);
+                            sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 744, me->GetMap());
                 }
             }
         }

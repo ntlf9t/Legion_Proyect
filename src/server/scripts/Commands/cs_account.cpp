@@ -34,24 +34,24 @@ public:
     {
         static std::vector<ChatCommand> accountSetCommandTable =
         {
-            { "addon",          SEC_ADMINISTRATOR,  true,  &HandleAccountSetAddonCommand,     ""},
-            { "gmlevel",        SEC_CONSOLE,        true,  &HandleAccountSetGmLevelCommand,   ""},
-            { "password",       SEC_CONSOLE,        true,  &HandleAccountSetPasswordCommand,  ""}
+            { "addon",          SEC_ADMINISTRATOR,  true,  &HandleAccountSetAddonCommand,                              ""},
+            { "gmlevel",        SEC_CONSOLE,        true,  &HandleAccountSetGmLevelCommand,                            ""},
+            { "password",       SEC_CONSOLE,        true,  &HandleAccountSetPasswordCommand,                           ""}
         };
         static std::vector<ChatCommand> accountCommandTable =
         {
-            { "addon",          SEC_MODERATOR,      false, &HandleAccountAddonCommand,        ""},
-            { "create",         SEC_CONSOLE,        true,  &HandleAccountCreateCommand,       ""},
-            { "delete",         SEC_CONSOLE,        true,  &HandleAccountDeleteCommand,       ""},
-            { "onlinelist",     SEC_CONSOLE,        true,  &HandleAccountOnlineListCommand,   ""},
-            { "lock",           SEC_PLAYER,         false, &HandleAccountLockCommand,         ""},
-            { "set",            SEC_ADMINISTRATOR,  true,  NULL,            "", accountSetCommandTable },
-            { "password",       SEC_PLAYER,         false, &HandleAccountPasswordCommand,     ""},
-            { "",               SEC_PLAYER,         false, &HandleAccountCommand,             ""}
+            { "addon",          SEC_MODERATOR,      false, &HandleAccountAddonCommand,                                 ""},
+            { "create",         SEC_CONSOLE,        true,  &HandleAccountCreateCommand,                                ""},
+            { "delete",         SEC_CONSOLE,        true,  &HandleAccountDeleteCommand,                                ""},
+            { "onlinelist",     SEC_CONSOLE,        true,  &HandleAccountOnlineListCommand,                            ""},
+            { "lock",           SEC_PLAYER,         false, &HandleAccountLockCommand,                                  ""},
+            { "set",            SEC_ADMINISTRATOR,  true,  NULL,                              "", accountSetCommandTable },
+            { "password",       SEC_PLAYER,         false, &HandleAccountPasswordCommand,                              ""},
+            { "",               SEC_PLAYER,         false, &HandleAccountCommand,                                      ""}
         };
         static std::vector<ChatCommand> commandTable =
         {
-            { "account",        SEC_PLAYER,         true,  NULL,     "", accountCommandTable  }
+            { "account",        SEC_PLAYER,         true,  NULL,                                "", accountCommandTable  }
         };
         return commandTable;
     }

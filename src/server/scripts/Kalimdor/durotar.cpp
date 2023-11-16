@@ -592,5 +592,5 @@ void AddSC_durotar()
 	new npc_durotar_watershed_telescope_39345();
 	new npc_durotar_watershed_telescope_39346();
 	new npc_durotar_watershed_telescope_39347();
-	new npc_100874_illidari_enforcer_dh_questline();
+    new npc_100874_illidari_enforcer_dh_questline();
 }

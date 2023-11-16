@@ -1585,6 +1585,12 @@ class Player : public Unit, public GridObject<Player>
         void SetCommandStatusOn(uint32 command) { _activeCheats |= command; }
         void SetCommandStatusOff(uint32 command) { _activeCheats &= ~command; }
 
+		// PlayedTimeReward
+        uint32 ptr_Interval;
+        uint32 ptr_Money;
+		uint32 ptr_Item;
+
+
         // Played Time Stuff
         time_t m_logintime;
         time_t m_createdtime;
@@ -1745,7 +1751,7 @@ class Player : public Unit, public GridObject<Player>
         void ApplyOnBagsItems(std::function<bool(Player*, Item*, uint8 /*bag*/, uint8 /*slot*/)>&& function);
         void ApplyOnBankItems(std::function<bool(Player*, Item*, uint8 /*bag*/, uint8 /*slot*/)>&& function);
         void ApplyOnReagentBankItems(std::function<bool(Player*, Item*, uint8 /*bag*/, uint8 /*slot*/)>&& function);
-
+		
         void AddTrackingQuestIfNeeded(ObjectGuid sourceGuid);
 
         void DepositItemToReagentBank();
@@ -2040,6 +2046,7 @@ class Player : public Unit, public GridObject<Player>
         void SendQuestConfirmAccept(Quest const* quest, Player* pReceiver);
         void SendPushToPartyResponse(Player* player, uint8 msg);
         void SendQuestUpdateAddCredit(Quest const* quest, ObjectGuid guid, QuestObjective const& obj, uint16 count);
+		void SendQuestUpdateAddCreditSimple(QuestObjective const& obj) const;
         void SendQuestUpdateAddPlayer(Quest const* quest, uint16 old_count, uint16 add_count);
         std::tuple<uint32, uint32> GetWorldQuestBonusTreeMod(WorldQuest const* wq);
         bool WorldQuestCompleted(uint32 QuestID) const;
@@ -2944,7 +2951,7 @@ class Player : public Unit, public GridObject<Player>
         std::recursive_mutex i_killMapLock;
         std::recursive_mutex i_personalLootLock;
 
-        bool HaveAtClient(WorldObject const* u);
+        bool HaveAtClient(WorldObject const* u) const;
         void AddClient(ObjectGuid guid);
         void RemoveClient(ObjectGuid guid);
         GuidSet& GetClient();
@@ -2999,7 +3006,7 @@ class Player : public Unit, public GridObject<Player>
         bool IsPetNeedBeTemporaryUnsummoned() const { return !IsInWorld() || !isAlive() || IsMounted() /*+in flight*/; }
 
         void SendCinematicStart(uint32 CinematicSequenceId);
-        void SendMovieStart(uint32 MovieId);
+        void SendMovieStart(uint32 movieId);
 
         uint32 realmTransferid;
         void SetTransferId(uint32 Id) { realmTransferid = Id; }
@@ -3165,6 +3172,7 @@ class Player : public Unit, public GridObject<Player>
 
         float GetPersonnalXpRate() { return m_PersonnalXpRate; }
         void SetPersonnalXpRate(float PersonnalXpRate);
+		void OnCombatExit();
 
         void SetKnockBackTime(uint32 timer) { m_knockBackTimer = timer; }
         uint32 GetKnockBackTime() const { return m_knockBackTimer; }
@@ -3251,7 +3259,7 @@ class Player : public Unit, public GridObject<Player>
         void SetScenarioId(uint16 scenarioId) { m_scenarioId = scenarioId; }
 
         // Adventures.
-        uint16 getAdventureQuestID() const { return m_adventure_questID; }
+        uint16 getAdventureQuestID();
         void setAdventureQuestID(uint16 questID);
 
         int32 GetCommandCooldown() const;
@@ -3285,6 +3293,7 @@ class Player : public Unit, public GridObject<Player>
         // Gamemaster whisper whitelist
         GuidList WhisperList;
 
+        uint32 m_combatExitTime;
         int32 m_contestedPvPTimer;
         int32 m_pvpAuraCheckTimer;
         uint16 m_statsUpdateTimer;
@@ -3526,6 +3535,7 @@ class Player : public Unit, public GridObject<Player>
         bool   m_AdventureQuestChanged;
         time_t m_lastDailyQuestTime;
 
+        uint32 m_hostileReferenceCheckTimer;
         uint32 m_drunkTimer;
         uint32 m_weaponChangeTimer;
 

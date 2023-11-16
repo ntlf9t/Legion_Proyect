@@ -1778,7 +1778,8 @@ void DB2Manager::InitDB2CustomStores()
                 continue;
 
             // valid taxi network node
-            auto field = static_cast<uint16>((node->ID - 1) / 8);
+            //auto field = static_cast<uint16>((node->ID - 1) / 8);
+			uint32 field = uint32((node->ID - 1) / 8);
             uint32 submask = 1 << ((node->ID - 1) % 8);
 
             sTaxiNodesMask[field] |= submask;

@@ -85,9 +85,10 @@ struct AuctionEntry
     time_t expire_time;
     ObjectGuid::LowType bidder;
     uint32 deposit;                                         //deposit can be calculated only when creating auction
+	uint32 etime;
+	uint32 houseId;
     AuctionHouseEntry const* auctionHouseEntry;             // in AuctionHouse.dbc
     uint32 factionTemplateId;
-    uint32 houseId;
 
     // helpers
     uint32 GetHouseId() const;

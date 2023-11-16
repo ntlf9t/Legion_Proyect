@@ -568,25 +568,6 @@ struct SpellProcEventEntry
 
 typedef std::vector<std::vector<SpellProcEventEntry> > SpellProcEventMap;
 
-struct SpellProcEntry
-{
-    uint32      schoolMask;                                 // if nonzero - bitmask for matching proc condition based on spell's school
-    uint32      spellFamilyName;                            // if nonzero - for matching proc condition based on candidate spell's SpellFamilyName
-    flag128     spellFamilyMask;                            // if nonzero - bitmask for matching proc condition based on candidate spell's SpellFamilyFlags
-    uint32      typeMask;                                   // if nonzero - owerwrite procFlags field for given Spell.dbc entry, bitmask for matching proc condition, see enum ProcFlags
-    uint32      spellTypeMask;                              // if nonzero - bitmask for matching proc condition based on candidate spell's damage/heal effects, see enum ProcFlagsSpellType
-    uint32      spellPhaseMask;                             // if nonzero - bitmask for matching phase of a spellcast on which proc occurs, see enum ProcFlagsSpellPhase
-    uint32      hitMask;                                    // if nonzero - bitmask for matching proc condition based on hit result, see enum ProcFlagsHit
-    uint32      attributesMask;                             // bitmask, see ProcAttributes
-    float       ratePerMinute;                              // if nonzero - chance to proc is equal to value * aura caster's weapon speed / 60
-    float       chance;                                     // if nonzero - owerwrite procChance field for given Spell.dbc entry, defines chance of proc to occur, not used if perMinuteRate set
-    float       cooldown;                                   // if nonzero - cooldown in secs for aura proc, applied to aura
-    uint32      charges;                                    // if nonzero - owerwrite procCharges field for given Spell.dbc entry, defines how many times proc can occur before aura remove, 0 - infinite
-    uint32      modcharges;                                 // if nonzero - procCharges field for given Spell.dbc entry, defines how many times proc can occur before aura remove, 0 - infinite
-};
-
-typedef std::unordered_map<uint32, SpellProcEntry> SpellProcMap;
-
 struct SpellEnchantProcEntry
 {
     uint32      customChance;
@@ -1235,10 +1216,6 @@ class SpellMgr
         const std::vector<SpellProcEventEntry>* GetSpellProcEvent(uint32 spellId) const;
         bool IsSpellProcEventCanTriggeredBy(SpellProcEventEntry const* spellProcEvent, uint32 EventProcFlag, SpellInfo const* procSpell, uint32 procFlags, uint32 procExtra, bool active);
 
-        // Spell proc table
-        SpellProcEntry const* GetSpellProcEntry(uint32 spellId) const;
-        bool CanSpellTriggerProcOnEvent(SpellProcEntry const& procEntry, ProcEventInfo& eventInfo);
-
         // Spell bonus data table
         SpellBonusEntry const* GetSpellBonusData(uint32 spellId) const;
 
@@ -1300,8 +1277,8 @@ class SpellMgr
         void LoadSpellTargetPositions();
         void LoadSpellGroups();
         void LoadSpellGroupStackRules();
-        void LoadSpellProcEvents();
-        void LoadSpellProcs();
+		void LoadSpellProcEvents();
+
         void LoadSpellBonusess();
         void LoadSpellThreats();
         void LoadSkillLineAbilityMap();
@@ -1340,7 +1317,7 @@ class SpellMgr
         SpellGroupSpellMap         mSpellGroupSpell;
         SpellGroupStackMap         mSpellGroupStack;
         SpellProcEventMap          mSpellProcEventMap;
-        SpellProcMap               mSpellProcMap;
+
         SpellBonusMap              mSpellBonusMap;
         SpellBonusVector           mSpellBonusVector;
         SpellThreatMap             mSpellThreatMap;

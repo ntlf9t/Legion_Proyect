@@ -263,7 +263,7 @@ public:
                 damage = 0;
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             //If creature has no target
             if (!UpdateVictim())
@@ -867,7 +867,7 @@ public:
             tSeek = urand(1000, 2000);
         }
 
-        void DamageTaken(Unit* who, uint32& damage, DamageEffectType /*dmgType*/)
+        void DamageTaken(Unit* who, uint32& damage, DamageEffectType /*dmgType*/) override
         {
             if (who->GetTypeId() == TYPEID_PLAYER)
             {
@@ -937,7 +937,7 @@ public:
                 damage = 0;
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             if (tSeek <= diff)
             {
@@ -1441,7 +1441,7 @@ public:
         uint32 WaypointId, willCastEnrage, tEnrage, CommonWPCount;
         bool Run, Loc1, Loc2, Jump, Combat;
 
-        void Reset()
+        void Reset() override
         {
             Run = Loc1 = Loc2 = Combat = Jump = false;
             WaypointId          = 0;
@@ -1449,7 +1449,7 @@ public:
             willCastEnrage      = urand(0, 1);
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             if (me->GetPositionX() == -1618.86f && me->GetPositionY() == 1505.68f) // I was spawned in location 1 on NW Rooftop
             {
@@ -1775,7 +1775,7 @@ public:
         return true;
     }
 
-    CreatureAI* GetAI(Creature* creature) const
+    CreatureAI* GetAI(Creature* creature) const override
     {
         return new npc_josiah_avery_p2AI (creature);
     }
@@ -1911,7 +1911,6 @@ public:
 
         void Reset() override
         {
-			me->InitCharmInfo();
             me->GetCharmInfo()->InitEmptyActionBar(false);
             me->GetCharmInfo()->SetActionBar(0, SPELL_ATTACK_LURKER, ACT_PASSIVE);
             me->SetReactState(REACT_DEFENSIVE);
@@ -1920,33 +1919,23 @@ public:
 
         void UpdateAI(uint32 /*diff*/) override
         {
-            if (me->GetOwner())
+            Player* player = me->GetOwner()->ToPlayer();
+            if (!player)
+                return;
+
+            if (player->GetQuestStatus(QUEST_FROM_THE_SHADOWS) == QUEST_STATUS_REWARDED)
             {
-                Player* player = me->GetOwner()->ToPlayer();
-                if (!player)
-                    return;
-
-                if (player->GetQuestStatus(QUEST_FROM_THE_SHADOWS) == QUEST_STATUS_REWARDED)
-                {
-                    me->DespawnOrUnsummon(1);
-                }
-
-                if (!UpdateVictim())
-                {
-                    me->GetCharmInfo()->SetIsFollowing(true);
-                    me->SetReactState(REACT_DEFENSIVE);
-                    return;
-                }
-
-                DoMeleeAttackIfReady();
+                me->DespawnOrUnsummon(1);
             }
-            else
-            {
-                if (!UpdateVictim())
-                    return;
 
-                DoMeleeAttackIfReady();
-			}
+            if (!UpdateVictim())
+            {
+                me->GetCharmInfo()->SetIsFollowing(true);
+                me->SetReactState(REACT_DEFENSIVE);
+                return;
+            }
+
+            DoMeleeAttackIfReady();
         }
 
         void SpellHitTarget(Unit* Mastiff, SpellInfo const* cSpell) override
@@ -2380,11 +2369,11 @@ public:
         uint32 krennansay;
         bool PlayerOn, KrennanOn;
 
-        void AttackStart(Unit* /*who*/) {}
-        void EnterCombat(Unit* /*who*/) {}
-        void EnterEvadeMode() {}
+        void AttackStart(Unit* /*who*/)  override {}
+        void EnterCombat(Unit* /*who*/)  override {}
+        void EnterEvadeMode()  override {}
 
-        void Reset()override
+        void Reset() override
         {
              krennansay     = 500;//Check every 500ms initially
              PlayerOn       = false;
@@ -2434,7 +2423,7 @@ public:
                player->FailQuest(QUEST_SAVE_KRENNAN_ARANAS);
         }
 
-        void OnCharmed(bool /*apply*/)
+        void OnCharmed(bool /*apply*/) override
         {
         }
 
@@ -2487,9 +2476,9 @@ public:
         bool Say, Move, Cast, KrennanDead;
         uint32 SayTimer;
 
-        void AttackStart(Unit* /*who*/) {}
-        void EnterCombat(Unit* /*who*/) {}
-        void EnterEvadeMode() {}
+        void AttackStart(Unit* /*who*/) override {}
+        void EnterCombat(Unit* /*who*/) override {}
+        void EnterEvadeMode() override {}
 
         void Reset() override
         {
@@ -2731,7 +2720,7 @@ public:
                     Start(false, true, who->GetGUID());
         }
 
-        void WaypointReached(uint32 i)
+        void WaypointReached(uint32 i) override
         {
             Vehicle *pVehicle = me->GetVehicleKit();
             Player* player = GetPlayerForEscort();
@@ -3019,9 +3008,9 @@ public:
 
         bool PlayerOn;
 
-        void AttackStart(Unit* /*who*/) {}
-        void EnterCombat(Unit* /*who*/) {}
-        void EnterEvadeMode() {}
+        void AttackStart(Unit* /*who*/) override {}
+        void EnterCombat(Unit* /*who*/) override {}
+        void EnterEvadeMode() override {}
 
         void Reset() override
         {
@@ -3035,7 +3024,7 @@ public:
                 PlayerOn = true;
 
                 if (apply)
-                    Start(false, true, who->GetGUID(), NULL, NULL, true);
+                    Start(false, true, who->GetGUID(), NULL, false, true);
             }
         }
 
@@ -3057,7 +3046,7 @@ public:
 
         void OnCharmed(bool /*apply*/) override {}
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             npc_escortAI::UpdateAI(diff);
 

@@ -20,9 +20,12 @@
 #include "CreatureAI.h"
 #include "MapManager.h"
 #include "FleeingMovementGenerator.h"
+#include "PathGenerator.h"
 #include "ObjectAccessor.h"
 #include "MoveSplineInit.h"
 #include "MoveSpline.h"
+#include "Player.h"
+#include "VMapFactory.h"
 
 #define MIN_QUIET_DISTANCE 28.0f
 #define MAX_QUIET_DISTANCE 43.0f
@@ -39,15 +42,40 @@ void FleeingMovementGenerator<T>::_setTargetLocation(T &owner)
     if (!_setMoveData(owner))
         return;
 
-    if (!_getPoint(owner, i_x, i_y, i_z))
+    float x, y, z;
+    _getPoint(owner, x, y, z);
+
+    // Add LOS check for target point
+    Position mypos = owner.GetPosition();
+    bool isInLOS = VMAP::VMapFactory::createOrGetVMapManager()->isInLineOfSight(owner.GetMapId(),
+                                                                                mypos.m_positionX,
+                                                                                mypos.m_positionY,
+                                                                                mypos.m_positionZ + 2.0f,
+                                                                                x, y, z + 2.0f);
+
+    if (!isInLOS)
+    {
+        i_nextCheckTime.Reset(200);
         return;
+    }
+
+    PathGenerator path(&owner);
+    path.SetPathLengthLimit(30.0f);
+    bool result = path.CalculatePath(x, y, z);
+    if (!result || (path.GetPathType() & PATHFIND_NOPATH))
+    {
+        i_nextCheckTime.Reset(100);
+        return;
+    }
 
     owner.AddUnitState(UNIT_STATE_FLEEING_MOVE);
 
     Movement::MoveSplineInit init(owner);
     init.MoveTo(i_x,i_y,i_z);
     init.SetWalk(false);
-    init.Launch();
+	init.Launch();
+    int32 traveltime = init.Launch();
+    i_nextCheckTime.Reset(traveltime + urand(800, 1500));
 }
 
 template<class T>

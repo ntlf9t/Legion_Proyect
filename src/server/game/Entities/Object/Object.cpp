@@ -1545,9 +1545,6 @@ uint16 Object::GetUInt16Value(uint16 index, uint8 offset) const
 
 ObjectGuid const& Object::GetGuidValue(uint16 index) const
 {
-    if (!this)
-        return ObjectGuid::Empty;
-
     // ASSERT(index + 1 < m_valuesCount || PrintIndexError(index, false));
     if (index + 1 < m_valuesCount || PrintIndexError(index, false))
         return *reinterpret_cast<ObjectGuid*>(&m_uint32Values[index]);
@@ -2590,6 +2587,14 @@ bool WorldObject::canSeeOrDetect(WorldObject const* obj, bool ignoreStealth, boo
                         if (corpse->IsWithinDist(obj, GetSightRange(obj), false))
                             corpseVisibility = true;
                 }
+            }
+
+            if (Unit const* target = obj->ToUnit())
+            {
+                // Don't allow to detect vehicle accessories if you can't see vehicle
+                if (Unit const* VehicleCreate = target->GetVehicleBase())
+                    if (!thisPlayer->HaveAtClient(VehicleCreate))
+                        return false;
             }
         }
 

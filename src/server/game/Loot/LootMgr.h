@@ -210,6 +210,7 @@ struct LootItem
     ItemQualities quality;
     std::list<Condition*> conditions;                               // additional loot condition
     GuidSet allowedGUIDs;
+	ObjectGuid rollWinnerGUID;									 // Stores the guid of person who won loot, if his bags are full only he can see the item in loot list!
     uint32  count;
     bool    currency          : 1;
     bool    is_looted         : 1;

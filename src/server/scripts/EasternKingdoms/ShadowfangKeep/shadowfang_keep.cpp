@@ -51,7 +51,7 @@ class npc_apothecary_hummel : public CreatureScript
                 {
                     Player* pPlayer = players.begin()->getSource();
                     if (pPlayer && pPlayer->GetGroup())
-                        sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 288);
+                        sLFGMgr->FinishDungeon(pPlayer->GetGroup()->GetGUID(), 288, me->GetMap());
                 }
             }
         };

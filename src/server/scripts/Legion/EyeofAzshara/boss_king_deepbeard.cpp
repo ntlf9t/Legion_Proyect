@@ -338,7 +338,10 @@ public:
     
                     me->GetMotionMaster()->MovePoint(1, x, y, z);
                 }
-                else randomMoveTimer -= diff;
+                else
+				{
+					randomMoveTimer -= diff;
+				}
 
             if (checkBossStateTimer <= diff)
             {
@@ -348,7 +351,9 @@ public:
                 checkBossStateTimer = 1000;
             }
             else
+			{
                 checkBossStateTimer -= diff;
+			}
         }
     };
 

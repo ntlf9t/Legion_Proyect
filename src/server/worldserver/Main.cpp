@@ -30,7 +30,9 @@
 #include <openssl/crypto.h>
 #include <openssl/opensslv.h>
 
-
+#include "IpNetwork.h"
+#include "Resolver.h"
+#include "DatabaseLoader.h"
 #include "AsyncAcceptor.h"
 #include "BattlegroundMgr.h"
 #include "BigNumber.h"
@@ -39,6 +41,7 @@
 #include "Configuration/Config.h"
 #include "DatabaseEnv.h"
 #include "GitRevision.h"
+#include "IoContext.h"
 #include "MapInstanced.h"
 #include "MapManager.h"
 #include "ObjectAccessor.h"
@@ -86,8 +89,8 @@ char serviceDescription[] = "NordrassilCore World of Warcraft emulator world ser
 int m_ServiceStatus = -1;
 #endif
 
-boost::asio::io_service _ioService;
-boost::asio::deadline_timer _freezeCheckTimer(_ioService);
+Trinity::Asio::IoContext _ioContext;
+boost::asio::deadline_timer _freezeCheckTimer(_ioContext);
 
 std::vector<uint32> _lastMapChangeMsTime;
 std::vector<uint32> _mapLoopCounter;
@@ -102,7 +105,7 @@ uint32 _maxMapStuckTimeInMs(0);
 
 void SignalHandler(const boost::system::error_code& error, int signalNumber);
 void FreezeDetectorHandler(const boost::system::error_code& error);
-AsyncAcceptor* StartRaSocketAcceptor(boost::asio::io_service& ioService);
+AsyncAcceptor* StartRaSocketAcceptor(Trinity::Asio::IoContext& ioContext);
 bool StartDB();
 void StopDB();
 void WorldUpdateLoop();
@@ -170,8 +173,10 @@ extern int main(int argc, char **argv)
     uint32 pid = 0;
     if (!pidFile.empty())
     {
-        if (pid = CreatePIDFile(pidFile))
+        if ((pid = CreatePIDFile(pidFile)))
+		{
             TC_LOG_INFO(LOG_FILTER_WORLDSERVER, "Daemon PID: %u\n", pid);
+		}
         else
         {
             TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Cannot create PID file %s.\n", pidFile.c_str());
@@ -180,7 +185,7 @@ extern int main(int argc, char **argv)
     }
 
     // Set signal handlers (this must be done before starting io_service threads, because otherwise they would unblock and exit)
-    boost::asio::signal_set signals(_ioService, SIGINT, SIGTERM);
+    boost::asio::signal_set signals(_ioContext, SIGINT, SIGTERM);
 #if PLATFORM == PLATFORM_WINDOWS
     signals.add(SIGBREAK);
 #endif
@@ -194,7 +199,7 @@ extern int main(int argc, char **argv)
         numThreads = 1;
 
     for (int i = 0; i < numThreads; ++i)
-        threadPool.emplace_back(boost::bind(&boost::asio::io_service::run, &_ioService));
+        threadPool.emplace_back(boost::bind(&Trinity::Asio::IoContext::run, &_ioContext));
 
     // Set process priority according to configuration settings
     SetProcessPriority("server.worldserver");
@@ -209,7 +214,7 @@ extern int main(int argc, char **argv)
     // Set server offline (not connectable)
     LoginDatabase.DirectPExecute("UPDATE realmlist SET flag = flag | %u WHERE id = '%d'", REALM_FLAG_OFFLINE, realm.Id.Realm);
    
-    sRealmList->Initialize(_ioService, sConfigMgr->GetIntDefault("RealmsStateUpdateDelay", 10));
+    sRealmList->Initialize(_ioContext, sConfigMgr->GetIntDefault("RealmsStateUpdateDelay", 10));
     LoadRealmInfo();
 
     // Initialize the World
@@ -235,7 +240,7 @@ extern int main(int argc, char **argv)
     // Start the Remote Access port (acceptor) if enabled
     AsyncAcceptor* raAcceptor = nullptr;
     if (sConfigMgr->GetBoolDefault("Ra.Enable", false))
-        raAcceptor = StartRaSocketAcceptor(_ioService);
+        raAcceptor = StartRaSocketAcceptor(_ioContext);
 
     // Start soap serving thread if enabled
     std::thread* soapThread = nullptr;
@@ -254,7 +259,7 @@ extern int main(int argc, char **argv)
         return false;
     }
 
-    sWorldSocketMgr.StartNetwork(_ioService, worldListener, worldPort, networkThreads);
+    sWorldSocketMgr.StartNetwork(_ioContext, worldListener, worldPort, networkThreads);
     // Set server online (allow connecting now)
     LoginDatabase.DirectPExecute("UPDATE realmlist SET flag = flag & ~%u, population = 0 WHERE id = '%u'", REALM_FLAG_OFFLINE, realm.Id.Realm);
     realm.PopulationLevel = 0.0f;
@@ -273,7 +278,7 @@ extern int main(int argc, char **argv)
     //if (sConfigMgr->GetBoolDefault("Log.Async.Enable", false))
     {
         // If logs are supposed to be handled async then we need to pass the io_service into the Log singleton
-        Log::instance(nullptr/*&_ioService*/);
+        Log::instance(nullptr/*&_ioContext*/);
     }
 
     TC_LOG_INFO(LOG_FILTER_WORLDSERVER, "%s (worldserver-daemon) ready...", GitRevision::GetFullVersion());
@@ -344,71 +349,41 @@ extern int main(int argc, char **argv)
     if (cliThread != nullptr)
     {
 #ifdef _WIN32
-        // First try to cancel any I/O in the CLI thread
-        if (!CancelSynchronousIo(cliThread->native_handle()))
-        {
-            // if CancelSynchronousIo() fails, print the error and try with old way
-            DWORD errorCode = GetLastError();
 
-            // if CancelSynchronousIo fails with ERROR_NOT_FOUND then there was nothing to cancel, proceed with shutdown
-            if (errorCode != ERROR_NOT_FOUND)
-            {
-                LPSTR errorBuffer;
-                DWORD numCharsWritten = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
-                    nullptr, errorCode, 0, (LPTSTR)&errorBuffer, 0, nullptr);
-                if (!numCharsWritten)
-                    errorBuffer = "Unknown error";
-												  
-											 
+        // this only way to terminate CLI thread exist at Win32 (alt. way exist only in Windows Vista API)
+        //_exit(1);
+        // send keyboard input to safely unblock the CLI thread
+        INPUT_RECORD b[4];
+        HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
+        b[0].EventType = KEY_EVENT;
+        b[0].Event.KeyEvent.bKeyDown = TRUE;
+        b[0].Event.KeyEvent.uChar.AsciiChar = 'X';
+        b[0].Event.KeyEvent.wVirtualKeyCode = 'X';
+        b[0].Event.KeyEvent.wRepeatCount = 1;
 
-                TC_LOG_DEBUG(LOG_FILTER_WORLDSERVER, "Error cancelling I/O of CliThread, error code %u, detail: %s", uint32(errorCode), errorBuffer);
-											 
-												  
-												  
-											 
+        b[1].EventType = KEY_EVENT;
+        b[1].Event.KeyEvent.bKeyDown = FALSE;
+        b[1].Event.KeyEvent.uChar.AsciiChar = 'X';
+        b[1].Event.KeyEvent.wVirtualKeyCode = 'X';
+        b[1].Event.KeyEvent.wRepeatCount = 1;
 
-                if (numCharsWritten)
-                    LocalFree(errorBuffer);
-												  
-												   
-														
-											 
-													
+        b[2].EventType = KEY_EVENT;
+        b[2].Event.KeyEvent.bKeyDown = TRUE;
+        b[2].Event.KeyEvent.dwControlKeyState = 0;
+        b[2].Event.KeyEvent.uChar.AsciiChar = '\r';
+        b[2].Event.KeyEvent.wVirtualKeyCode = VK_RETURN;
+        b[2].Event.KeyEvent.wRepeatCount = 1;
+        b[2].Event.KeyEvent.wVirtualScanCode = 0x1c;
 
-                // send keyboard input to safely unblock the CLI thread
-                INPUT_RECORD b[4];
-                HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
-                b[0].EventType = KEY_EVENT;
-                b[0].Event.KeyEvent.bKeyDown = TRUE;
-                b[0].Event.KeyEvent.uChar.AsciiChar = 'X';
-                b[0].Event.KeyEvent.wVirtualKeyCode = 'X';
-                b[0].Event.KeyEvent.wRepeatCount = 1;
-
-                b[1].EventType = KEY_EVENT;
-                b[1].Event.KeyEvent.bKeyDown = FALSE;
-                b[1].Event.KeyEvent.uChar.AsciiChar = 'X';
-                b[1].Event.KeyEvent.wVirtualKeyCode = 'X';
-                b[1].Event.KeyEvent.wRepeatCount = 1;
-
-                b[2].EventType = KEY_EVENT;
-                b[2].Event.KeyEvent.bKeyDown = TRUE;
-                b[2].Event.KeyEvent.dwControlKeyState = 0;
-                b[2].Event.KeyEvent.uChar.AsciiChar = '\r';
-                b[2].Event.KeyEvent.wVirtualKeyCode = VK_RETURN;
-                b[2].Event.KeyEvent.wRepeatCount = 1;
-                b[2].Event.KeyEvent.wVirtualScanCode = 0x1c;
-
-                b[3].EventType = KEY_EVENT;
-                b[3].Event.KeyEvent.bKeyDown = FALSE;
-                b[3].Event.KeyEvent.dwControlKeyState = 0;
-                b[3].Event.KeyEvent.uChar.AsciiChar = '\r';
-                b[3].Event.KeyEvent.wVirtualKeyCode = VK_RETURN;
-                b[3].Event.KeyEvent.wVirtualScanCode = 0x1c;
-                b[3].Event.KeyEvent.wRepeatCount = 1;
-                DWORD numb;
-                WriteConsoleInput(hStdIn, b, 4, &numb);
-            }
-        }
+        b[3].EventType = KEY_EVENT;
+        b[3].Event.KeyEvent.bKeyDown = FALSE;
+        b[3].Event.KeyEvent.dwControlKeyState = 0;
+        b[3].Event.KeyEvent.uChar.AsciiChar = '\r';
+        b[3].Event.KeyEvent.wVirtualKeyCode = VK_RETURN;
+        b[3].Event.KeyEvent.wVirtualScanCode = 0x1c;
+        b[3].Event.KeyEvent.wRepeatCount = 1;
+        DWORD numb;
+        WriteConsoleInput(hStdIn, b, 4, &numb);
 #endif
         cliThread->join();
         delete cliThread;
@@ -426,8 +401,7 @@ extern int main(int argc, char **argv)
 
 bool LoadRealmInfo()
 {
-    boost::asio::ip::tcp::resolver resolver(_ioService);
-    boost::asio::ip::tcp::resolver::iterator end;
+    boost::asio::ip::tcp::resolver resolver(_ioContext);
 
     QueryResult result = LoginDatabase.PQuery("SELECT id, name, address, localAddress, localSubnetMask, port, icon, flag, timezone, allowedSecurityLevel, population, gamebuild, Region, Battlegroup FROM realmlist WHERE id = %u", realm.Id.Realm);
     if (!result)
@@ -435,37 +409,33 @@ bool LoadRealmInfo()
 
     Field* fields = result->Fetch();
     realm.Name = fields[1].GetString();
-    boost::asio::ip::tcp::resolver::query externalAddressQuery(tcp::v4(), fields[2].GetString(), "");
+    Optional<boost::asio::ip::tcp::endpoint> externalAddressQuery = Trinity::Net::Resolve(resolver, tcp::v4(), fields[2].GetString(), "");
 
-    boost::system::error_code ec;
-    boost::asio::ip::tcp::resolver::iterator endPoint = resolver.resolve(externalAddressQuery, ec);
-    if (endPoint == end || ec)
+    if (!externalAddressQuery)
     {
         TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Could not resolve address %s", fields[2].GetString().c_str());
         return false;
     }
 
-    realm.ExternalAddress = Trinity::make_unique<boost::asio::ip::address>((*endPoint).endpoint().address());
+    realm.ExternalAddress = std::make_unique<boost::asio::ip::address>(std::move(externalAddressQuery->address()));
 
-    boost::asio::ip::tcp::resolver::query localAddressQuery(tcp::v4(), fields[3].GetString(), "");
-    endPoint = resolver.resolve(localAddressQuery, ec);
-    if (endPoint == end || ec)
+	Optional<boost::asio::ip::tcp::endpoint> localAddressQuery = Trinity::Net::Resolve(resolver, tcp::v4(), fields[3].GetString(), "");
+	if (!localAddressQuery)
     {
         TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Could not resolve address %s", fields[3].GetString().c_str());
         return false;
     }
 
-    realm.LocalAddress = Trinity::make_unique<boost::asio::ip::address>((*endPoint).endpoint().address());
+    realm.LocalAddress = std::make_unique<boost::asio::ip::address>(std::move(localAddressQuery->address()));
 
-    boost::asio::ip::tcp::resolver::query localSubmaskQuery(tcp::v4(), fields[4].GetString(), "");
-    endPoint = resolver.resolve(localSubmaskQuery, ec);
-    if (endPoint == end || ec)
+	Optional<boost::asio::ip::tcp::endpoint> localSubmaskQuery = Trinity::Net::Resolve(resolver, tcp::v4(), fields[4].GetString(), "");
+	if (!localSubmaskQuery)
     {
         TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Could not resolve address %s", fields[4].GetString().c_str());
         return false;
     }
 
-    realm.LocalSubnetMask = Trinity::make_unique<boost::asio::ip::address>((*endPoint).endpoint().address());
+    realm.LocalSubnetMask = std::make_unique<boost::asio::ip::address>(std::move(localSubmaskQuery->address()));
 
     realm.Port = fields[5].GetUInt16();
     realm.Type = fields[6].GetUInt8();
@@ -475,13 +445,13 @@ bool LoadRealmInfo()
     realm.PopulationLevel = fields[10].GetFloat();
     realm.Id.Region = fields[12].GetUInt8();
     realm.Id.Site = fields[13].GetUInt8();
-    realm.Build = sConfigMgr->GetIntDefault("Game.Build.Version", 26972);
+    realm.Build = fields[11].GetUInt32();
     return true;
 }
 
 void ShutdownThreadPool(std::vector<std::thread>& threadPool)
 {
-    _ioService.stop();
+    _ioContext.stop();
 
     for (auto& thread : threadPool)
         thread.join();
@@ -671,12 +641,12 @@ void FreezeDetectorHandler(const boost::system::error_code& error)
     }
 }
 
-AsyncAcceptor* StartRaSocketAcceptor(boost::asio::io_service& ioService)
+AsyncAcceptor* StartRaSocketAcceptor(Trinity::Asio::IoContext& ioContext)
 {
     uint16 raPort = uint16(sConfigMgr->GetIntDefault("Ra.Port", 3443));
     std::string raListener = sConfigMgr->GetStringDefault("Ra.IP", "0.0.0.0");
 
-    AsyncAcceptor* acceptor = new AsyncAcceptor(ioService, raListener, raPort);
+    AsyncAcceptor* acceptor = new AsyncAcceptor(ioContext, raListener, raPort);
     acceptor->AsyncAccept<RASession>();
     return acceptor;
 }
@@ -686,107 +656,17 @@ bool StartDB()
 {
     MySQL::Library_Init();
 
-    std::string dbString = sConfigMgr->GetStringDefault("WorldDatabaseInfo", "");
-    if (dbString.empty())
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "World database not specified in configuration file");
-        return false;
-    }
-										 
+	// Load databases
+	DatabaseLoader loader("server.worldserver", DatabaseLoader::DATABASE_NONE);
+	loader
+		.AddDatabase(LoginDatabase, "Login")
+		.AddDatabase(CharacterDatabase, "Character")
+		.AddDatabase(WorldDatabase, "World")
+		.AddDatabase(HotfixDatabase, "Hotfix");
 
-    uint8 asyncThreads = uint8(sConfigMgr->GetIntDefault("WorldDatabase.WorkerThreads", 1));
-    if (asyncThreads < 1 || asyncThreads > 32)
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "World database: invalid number of worker threads specified. "
-            "Please pick a value between 1 and 32.");
-        return false;
-    }
+	if (!loader.Load())
+		return false;
 
-    uint8 synchThreads = uint8(sConfigMgr->GetIntDefault("WorldDatabase.SynchThreads", 1));
-    ///- Initialize the world database
-    if (!WorldDatabase.Open(dbString, asyncThreads, synchThreads))
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Cannot connect to world database %s", dbString.c_str());
-        return false;
-    }
-
-    ///- Get character database info from configuration file
-    dbString = sConfigMgr->GetStringDefault("CharacterDatabaseInfo", "");
-    if (dbString.empty())
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Character database not specified in configuration file");
-        return false;
-    }
-
-    asyncThreads = uint8(sConfigMgr->GetIntDefault("CharacterDatabase.WorkerThreads", 1));
-    if (asyncThreads < 1 || asyncThreads > 32)
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Character database: invalid number of worker threads specified. "
-            "Please pick a value between 1 and 32.");
-        return false;
-    }
-
-    synchThreads = uint8(sConfigMgr->GetIntDefault("CharacterDatabase.SynchThreads", 2));
-
-    ///- Initialize the Character database
-    if (!CharacterDatabase.Open(dbString, asyncThreads, synchThreads))
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Cannot connect to Character database %s", dbString.c_str());
-        return false;
-    }
-
-    ///- Get login database info from configuration file
-    dbString = sConfigMgr->GetStringDefault("LoginDatabaseInfo", "");
-    if (dbString.empty())
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Login database not specified in configuration file");
-        return false;
-    }
-
-    asyncThreads = uint8(sConfigMgr->GetIntDefault("LoginDatabase.WorkerThreads", 1));
-    if (asyncThreads < 1 || asyncThreads > 32)
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Login database: invalid number of worker threads specified. "
-            "Please pick a value between 1 and 32.");
-        return false;
-    }
-
-    synchThreads = uint8(sConfigMgr->GetIntDefault("LoginDatabase.SynchThreads", 1));
-    ///- Initialise the login database
-    if (!LoginDatabase.Open(dbString, asyncThreads, synchThreads))
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Cannot connect to login database %s", dbString.c_str());
-        return false;
-    }
-
-    dbString = sConfigMgr->GetStringDefault("HotfixDatabaseInfo", "");
-    if (dbString.empty())
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Hotfix database not specified in configuration file");
-        return false;
-    }
-
-    asyncThreads = uint8(sConfigMgr->GetIntDefault("HotfixDatabase.WorkerThreads", 1));
-    if (asyncThreads < 1 || asyncThreads > 32)
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Hotfix database: invalid number of worker threads specified. "
-            "Please pick a value between 1 and 32.");
-        return false;
-    }
-
-    synchThreads = uint8(sConfigMgr->GetIntDefault("HotfixDatabase.SynchThreads", 1));
-    if (!HotfixDatabase.Open(dbString, asyncThreads, synchThreads))
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Cannot connect to world database %s", dbString.c_str());
-        return false;
-    }
-
-    dbString = sConfigMgr->GetStringDefault("HotfixDatabaseInfo", "");
-    if (dbString.empty())
-    {
-        TC_LOG_ERROR(LOG_FILTER_WORLDSERVER, "Hotfix database not specified in configuration file");
-        return false;
-    }
     ///- Get the realm Id from the configuration file
     realm.Id.Realm = sConfigMgr->GetIntDefault("RealmID", 0);
     if (!realm.Id.Realm)
@@ -800,12 +680,9 @@ bool StartDB()
     ///- Clean the database before starting
     ClearOnlineAccounts();
 
-    // Insert version info into DB
+    ///- Insert version info into DB
     //WorldDatabase.PExecute("UPDATE version SET core_version = '%s', core_revision = '%s'", GitRevision::GetFullVersion(), _HASH);        // One-time query
-    LoginDatabase.PExecute("UPDATE version SET core_version = '%s'", GitRevision::GetFullVersion());
-    CharacterDatabase.PExecute("UPDATE version SET core_version = '%s'", GitRevision::GetFullVersion());
-    //HotfixDatabase.PExecute("UPDATE version SET core_version = '%s'", GitRevision::GetFullVersion());
-    WorldDatabase.PExecute("UPDATE version SET core_version = '%s'", GitRevision::GetFullVersion());        // One-time query
+
     sWorld->LoadDBVersion();
 
     TC_LOG_INFO(LOG_FILTER_WORLDSERVER, "Using World DB: %s", sWorld->GetDBVersion());

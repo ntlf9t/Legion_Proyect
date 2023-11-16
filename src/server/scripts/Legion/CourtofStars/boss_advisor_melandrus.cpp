@@ -116,7 +116,9 @@ public:
         void UpdateAI(uint32 diff) override
         {
             if (event)
+			{
                 if (elisanda)
+				{
                     if (timer <= diff)
                     {
                         if (queue)
@@ -140,10 +142,17 @@ public:
                             if (Unit* target = me->FindNearestPlayer(30))
                                 me->AI()->AttackStart(target);
                         }
-                    } else timer -= diff;
+                    } 
+					else
+					{
+						timer -= diff;
+					}
+				}
+			}
                     
                     
             if (checkrange)
+			{
                 if (checkrangetimer <= diff)
                 {
                     if (Unit* target = me->FindNearestPlayer(50))
@@ -157,7 +166,12 @@ public:
                             checkrange = false;
                         }
                     checkrangetimer = 1000;
-                } else checkrangetimer -= diff;
+                } 
+				else
+				{
+					checkrangetimer -= diff;
+				} 
+			} 
                 
             if (!UpdateVictim())
                 return;
@@ -258,6 +272,11 @@ public:
         {
             player->ADD_GOSSIP_ITEM_DB(19764, 0, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
             player->SEND_GOSSIP_MENU(29265, creature->GetGUID());
+
+			if (creature->GetGUID() == creature->GetInstanceScript()->GetGuidData(107435))
+			{
+			    creature->SetDisplayId(70103);
+			}
         }
         return true;
     }
@@ -266,7 +285,7 @@ public:
     {
         if (action != GOSSIP_ACTION_INFO_DEF+1)
             return false;
-        
+
         if (creature->GetGUID() == creature->GetInstanceScript()->GetGuidData(107435))
         {
             creature->AI()->Talk(1, player->GetGUID());
@@ -290,7 +309,7 @@ public:
             me->SetSpeed(MOVE_WALK, 2.0f, true);
             instance = me->GetInstanceScript();
             if (me->GetGUID() == instance->GetGuidData(107435) && instance->GetBossState(DATA_MELANDRUS_EVENT) != DONE)
-                instance->SetBossState(DATA_MELANDRUS_EVENT, NOT_STARTED); 
+                instance->SetBossState(DATA_MELANDRUS_EVENT, NOT_STARTED);
         }
 
         InstanceScript* instance;
@@ -545,7 +564,6 @@ class spell_righteous_indignation : public SpellScriptLoader
                 
                 target->RemoveAura(213213);
                 target->CastSpell(target, 213233, true);
-                
             }
 
             void Register() override
